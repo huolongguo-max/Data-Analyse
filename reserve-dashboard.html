@@ -1,0 +1,3111 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>储备数据可视化看板</title>
+<style>
+/* ===== Reset & Base ===== */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif; background: #f0f2f5; color: #1a1a2e; line-height: 1.5; }
+
+/* ===== Global Header ===== */
+.global-header {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  color: #fff; padding: 18px 36px;
+  display: flex; align-items: center; justify-content: space-between;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+  position: relative; z-index: 999;
+}
+.global-header h1 { font-size: 22px; font-weight: 700; letter-spacing: 1px; }
+.global-header .subtitle { font-size: 12px; color: #8899aa; margin-top: 2px; }
+
+/* ===== Main Nav ===== */
+.main-nav {
+  background: #fff;
+  display: flex; padding: 0 36px; gap: 4px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  position: sticky; top: 0; z-index: 100;
+}
+.main-nav-btn {
+  padding: 16px 32px; color: #666; font-size: 14px;
+  cursor: pointer; border: none; background: none;
+  border-bottom: 3px solid transparent; transition: all .25s;
+  font-weight: 500; position: relative;
+}
+.main-nav-btn.active {
+  color: #1a73e8; border-bottom-color: #1a73e8;
+  background: linear-gradient(180deg, rgba(26,115,232,0.04) 0%, transparent 100%);
+}
+.main-nav-btn:hover { color: #1a73e8; background: rgba(26,115,232,0.03); }
+
+/* ===== 头部班期版本筛选 ===== */
+.header-filter {
+  display: flex; align-items: center; gap: 10px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 8px; padding: 8px 14px;
+  backdrop-filter: blur(6px); flex-wrap: wrap;
+}
+.header-filter-label {
+  font-size: 12px; color: rgba(255,255,255,0.6);
+  white-space: nowrap; font-weight: 500; letter-spacing: 0.5px;
+}
+.header-filter select {
+  padding: 5px 26px 5px 9px; font-size: 13px;
+  border: none; border-radius: 5px;
+  background: rgba(255,255,255,0.92); color: #1a1a2e;
+  cursor: pointer; font-weight: 500;
+  appearance: none; -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath d='M2 3l3 3 3-3' fill='none' stroke='%231a1a2e' stroke-width='1.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 8px center;
+  min-width: 150px; outline: none;
+}
+.header-filter select:focus { box-shadow: 0 0 0 3px rgba(255,255,255,0.25); }
+
+/* ===== 头部右侧筛选器堆叠 ===== */
+.header-right { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
+
+/* ===== 自定义多选下拉 ===== */
+.multi-select { position: relative; min-width: 150px; }
+.multi-select-trigger {
+  display: flex; align-items: center;
+  padding: 5px 26px 5px 9px; font-size: 13px;
+  border: none; border-radius: 5px;
+  background: rgba(255,255,255,0.92); color: #1a1a2e;
+  cursor: pointer; font-weight: 500;
+  min-width: 150px; user-select: none;
+  appearance: none; -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath d='M2 3l3 3 3-3' fill='none' stroke='%231a1a2e' stroke-width='1.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 8px center;
+}
+.multi-select-trigger:hover { background-color: #fff; }
+.multi-select-arrow { font-size: 10px; color: #1a1a2e; margin-left: 8px; flex-shrink: 0; line-height: 1; }
+.multi-select-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 130px; }
+.multi-select-dropdown {
+  position: absolute; top: calc(100% + 4px); right: 0; z-index: 1001;
+  background: #fff; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  min-width: 200px; max-width: 260px;
+  overflow: hidden; border: 1px solid #e8ecf0;
+}
+.multi-select-options {
+  max-height: 280px; overflow-y: auto; padding: 6px 0;
+}
+.multi-select-options::-webkit-scrollbar { width: 4px; }
+.multi-select-options::-webkit-scrollbar-thumb { background: #d0d5dc; border-radius: 4px; }
+.multi-select-option {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 14px; font-size: 13px; color: #333;
+  cursor: pointer; transition: background .15s;
+}
+.multi-select-option:hover { background: #f5f8ff; }
+.multi-select-option input[type="checkbox"] {
+  width: 15px; height: 15px; cursor: pointer; accent-color: #1a73e8;
+}
+.multi-select-option span { flex: 1; pointer-events: none; }
+.multi-select-footer {
+  display: flex; justify-content: space-between; gap: 8px;
+  padding: 10px 12px; border-top: 1px solid #e8ecf0;
+  background: #fafbfc;
+}
+.multi-select-btn {
+  flex: 1; padding: 5px 0; font-size: 12px;
+  border: 1px solid #d0d5dc; border-radius: 5px;
+  background: #fff; color: #555; cursor: pointer;
+  transition: all .15s; font-weight: 500;
+}
+.multi-select-btn:hover { background: #f5f8ff; }
+.multi-select-btn.primary {
+  background: #1a73e8; color: #fff; border-color: #1a73e8;
+}
+.multi-select-btn.primary:hover { background: #155bb5; }
+
+/* ===== Sub Nav ===== */
+.sub-nav {
+  background: #fff; border-bottom: 1px solid #e8ecf0;
+  display: flex; padding: 0 36px; overflow-x: auto;
+  position: sticky; top: 54px; z-index: 99;
+}
+.sub-nav-btn {
+  padding: 13px 24px; color: #777; font-size: 13px;
+  cursor: pointer; border: none; background: none;
+  border-bottom: 2px solid transparent; transition: all .2s;
+  white-space: nowrap; font-weight: 500;
+}
+.sub-nav-btn.active { color: #1a73e8; border-bottom-color: #1a73e8; font-weight: 600; }
+.sub-nav-btn:hover { color: #1a73e8; background: #f5f8ff; }
+
+/* ===== Content Area ===== */
+.content { padding: 28px 36px; max-width: 1500px; margin: 0 auto; }
+.section { display: none; }
+.section.active { display: block; }
+
+/* ===== Section Header ===== */
+.section-header {
+  display: flex; align-items: center; margin-bottom: 24px; gap: 12px;
+}
+.section-header h2 { font-size: 20px; font-weight: 700; color: #1a1a2e; }
+.section-header .badge {
+  font-size: 11px; padding: 4px 12px; border-radius: 12px;
+  background: #e8f0fe; color: #1a73e8; font-weight: 500;
+}
+.section-divider {
+  height: 1px; background: linear-gradient(90deg, #e0e0e0 0%, transparent 100%);
+  margin: 28px 0 20px;
+}
+
+/* ===== Cards ===== */
+.card {
+  background: #fff; border-radius: 14px; padding: 24px;
+  margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.03);
+  border: 1px solid #eef0f4; transition: box-shadow .2s;
+}
+.card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04); }
+.card-title {
+  font-size: 15px; font-weight: 600; color: #1a1a2e;
+  margin-bottom: 18px; padding-bottom: 12px;
+  border-bottom: 1px solid #f0f2f5;
+  display: flex; align-items: center; gap: 8px;
+}
+.card-title::before {
+  content: ''; display: inline-block;
+  width: 4px; height: 18px; border-radius: 2px;
+  background: linear-gradient(180deg, #1a73e8, #4fc3f7);
+}
+.card-subtitle { font-size: 13px; color: #777; margin-bottom: 12px; font-weight: 500; }
+
+/* ===== Sub-section Header (for merged content labels) ===== */
+.sub-section-title {
+  font-size: 14px; font-weight: 600; color: #333;
+  margin-bottom: 0; padding: 10px 14px;
+  background: #f5f7fa; border-radius: 8px;
+  border-left: 4px solid #1a73e8;
+  letter-spacing: 0.4px;
+}
+
+/* ===== 城市/BD 滚动容器 ===== */
+.scroll-table-wrap {
+  max-height: 540px; overflow-y: auto; overflow-x: auto;
+  padding-right: 4px;
+}
+.scroll-table-wrap::-webkit-scrollbar { width: 7px; }
+.scroll-table-wrap::-webkit-scrollbar-track { background: #f1f3f5; border-radius: 4px; }
+.scroll-table-wrap::-webkit-scrollbar-thumb { background: #c1c7cd; border-radius: 4px; }
+.scroll-table-wrap::-webkit-scrollbar-thumb:hover { background: #a0a7ae; }
+.scroll-bar-wrap {
+  max-height: 540px; overflow-y: auto; padding-right: 4px;
+}
+.scroll-bar-wrap::-webkit-scrollbar { width: 7px; }
+.scroll-bar-wrap::-webkit-scrollbar-track { background: #f1f3f5; border-radius: 4px; }
+.scroll-bar-wrap::-webkit-scrollbar-thumb { background: #c1c7cd; border-radius: 4px; }
+.scroll-bar-wrap::-webkit-scrollbar-thumb:hover { background: #a0a7ae; }
+
+/* ===== Metric Cards Row ===== */
+.metric-row { display: grid; gap: 16px; margin-bottom: 20px; }
+.metric-row.col-2 { grid-template-columns: 1fr 1fr; }
+.metric-row.col-3 { grid-template-columns: 1fr 1fr 1fr; }
+.metric-row.col-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+
+.metric-card {
+  background: #fff; border-radius: 12px; padding: 22px;
+  border: 1px solid #eef0f4; position: relative;
+  transition: transform .15s, box-shadow .15s;
+}
+.metric-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+.metric-card.highlight {
+  border-color: #4fc3f7;
+  background: linear-gradient(135deg, #f8fdff 0%, #fff 100%);
+}
+.metric-card.highlight-orange {
+  border-color: #ffb74d;
+  background: linear-gradient(135deg, #fffdf8 0%, #fff 100%);
+}
+
+.metric-label { font-size: 12px; color: #888; margin-bottom: 8px; letter-spacing: 0.3px; }
+.metric-value { font-size: 30px; font-weight: 700; color: #1a1a2e; }
+.metric-value .unit { font-size: 14px; color: #999; font-weight: 400; margin-left: 2px; }
+
+.metric-sub { display: flex; gap: 20px; margin-top: 12px; }
+.metric-sub-item { font-size: 12px; color: #777; }
+.metric-sub-item span { font-weight: 600; color: #333; }
+
+.metric-change { font-size: 12px; margin-top: 6px; }
+.metric-change.up { color: #e53935; }
+.metric-change.down { color: #43a047; }
+
+/* ===== Progress Bar ===== */
+.progress-wrap { margin-top: 14px; }
+.progress-bar { height: 10px; background: #eef0f4; border-radius: 5px; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 5px; transition: width .4s ease; }
+.progress-fill.blue { background: linear-gradient(90deg, #4fc3f7, #1a73e8); }
+.progress-fill.orange { background: linear-gradient(90deg, #ffb74d, #ff9800); }
+.progress-fill.green { background: linear-gradient(90deg, #66bb6a, #43a047); }
+.progress-info { display: flex; justify-content: space-between; font-size: 11px; color: #aaa; margin-top: 5px; }
+
+/* ===== Toggle Buttons ===== */
+.toggle-group { display: flex; gap: 0; margin-bottom: 20px; }
+.toggle-btn {
+  padding: 8px 28px; font-size: 13px; border: 1px solid #d0d5dd;
+  cursor: pointer; background: #fff; color: #666;
+  transition: all .2s; font-weight: 500;
+}
+.toggle-btn:first-child { border-radius: 8px 0 0 8px; }
+.toggle-btn:last-child { border-radius: 0 8px 8px 0; }
+.toggle-btn.active { background: #1a73e8; color: #fff; border-color: #1a73e8; box-shadow: 0 2px 6px rgba(26,115,232,0.3); }
+.toggle-btn:hover:not(.active) { background: #f5f8ff; }
+
+/* ===== Filter Bar ===== */
+.filter-bar {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 16px; flex-wrap: wrap;
+  background: #f8f9fb; padding: 12px 16px; border-radius: 10px;
+}
+.filter-bar label { font-size: 12px; color: #666; font-weight: 500; }
+.filter-bar select, .filter-bar input {
+  padding: 7px 12px; border-radius: 7px; border: 1px solid #d0d5dd;
+  font-size: 12px; background: #fff; color: #333;
+  transition: border-color .2s;
+}
+.filter-bar select:focus { border-color: #1a73e8; outline: none; }
+
+/* ===== Chart Placeholder ===== */
+.chart-placeholder {
+  background: #fafbfc; border: 2px dashed #d8dce3; border-radius: 10px;
+  padding: 40px 20px; text-align: center; color: #aaa;
+  font-size: 14px; min-height: 200px;
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 8px;
+}
+.chart-placeholder .icon { font-size: 36px; opacity: 0.25; }
+.chart-placeholder .desc { font-size: 12px; color: #bbb; max-width: 400px; line-height: 1.6; }
+
+/* ===== Bar Chart Wireframe ===== */
+.bar-chart-wire { display: flex; flex-direction: column; gap: 14px; padding: 16px 0; }
+.bar-row { display: flex; align-items: center; gap: 12px; }
+.bar-label { width: 90px; font-size: 12px; color: #555; text-align: right; flex-shrink: 0; }
+.bar-track { flex: 1; height: 28px; background: #f0f2f5; border-radius: 5px; overflow: hidden; position: relative; }
+.bar-fill-1 { height: 100%; border-radius: 5px; position: absolute; left: 0; top: 0; }
+.bar-fill-2 { height: 100%; border-radius: 5px; position: absolute; top: 0; }
+.bar-legend { display: flex; gap: 24px; justify-content: center; margin-top: 12px; font-size: 12px; color: #777; font-weight: 500; }
+.legend-dot { width: 12px; height: 12px; border-radius: 3px; display: inline-block; margin-right: 6px; vertical-align: middle; }
+
+/* ===== Table ===== */
+.wire-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.wire-table th {
+  background: #f5f7fa; color: #555; font-weight: 600;
+  padding: 11px 14px; text-align: left;
+  border-bottom: 2px solid #e0e4e8; white-space: nowrap;
+}
+.wire-table td { padding: 11px 14px; border-bottom: 1px solid #f0f2f5; color: #444; }
+.wire-table tr:hover td { background: #f8faff; }
+.wire-table .cell-placeholder { color: #ccc; font-style: italic; }
+.wire-table .progress-cell { min-width: 120px; }
+.mini-progress { height: 6px; background: #eef0f4; border-radius: 3px; overflow: hidden; margin-top: 4px; }
+.mini-progress .fill { height: 100%; border-radius: 3px; }
+
+/* ===== Comparison Card ===== */
+.compare-card { text-align: center; padding: 22px; }
+.compare-card .period-label { font-size: 11px; color: #aaa; margin-bottom: 4px; }
+.compare-card .period-value { font-size: 24px; font-weight: 700; color: #1a1a2e; }
+.compare-card .delta {
+  display: inline-block; padding: 5px 14px; border-radius: 20px;
+  font-size: 12px; font-weight: 600; margin-top: 10px;
+}
+.compare-card .delta.up { background: #fce4ec; color: #c62828; }
+.compare-card .delta.down { background: #e8f5e9; color: #2e7d32; }
+
+/* ===== Compare Table ===== */
+.compare-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.compare-table th {
+  background: #f5f7fa; padding: 9px 12px; border: 1px solid #e4e7ec;
+  font-weight: 600; color: #555; text-align: center;
+}
+.compare-table td { padding: 9px 12px; border: 1px solid #eef0f4; text-align: center; color: #444; }
+.compare-table .change-up-bg { background: #fce4ec; color: #c62828; font-weight: 600; }
+.compare-table .change-down-bg { background: #e8f5e9; color: #2e7d32; font-weight: 600; }
+
+/* ===== Grid ===== */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+/* ===== Project Tabs (show all stacked) ===== */
+.project-section { margin-bottom: 20px; }
+.project-section:last-child { margin-bottom: 0; }
+
+/* ===== Stacked Bar ===== */
+.stacked-bar-group { margin-bottom: 16px; }
+.stacked-bar-label { font-size: 12px; color: #555; margin-bottom: 8px; font-weight: 500; }
+.stacked-bar { height: 28px; display: flex; border-radius: 5px; overflow: hidden; }
+.stacked-segment {
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; color: #fff; font-weight: 500;
+}
+
+/* ===== Overview Row (业绩+储备同行) ===== */
+.overview-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 20px;
+  align-items: stretch;
+}
+.overview-panel {
+  margin-bottom: 0 !important;
+  display: flex;
+  flex-direction: column;
+}
+/* 让两块 panel 内的 metric-row 撑满高度 */
+.overview-panel .metric-row {
+  flex: 1;
+  align-items: stretch;
+}
+/* 让每个 metric-card 内部纵向布局，progress-wrap 贴底 */
+.overview-metric-row .metric-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 160px;
+}
+.overview-metric-row .metric-card .overview-spacer {
+  flex: 1;
+  min-height: 44px;  /* 与 progress-wrap 大致等高 */
+}
+.overview-metric-row .metric-card .progress-wrap {
+  margin-top: auto;
+  padding-top: 10px;
+}
+@media (max-width: 900px) {
+  .overview-row { grid-template-columns: 1fr; }
+  .chart-sections-row { flex-direction: column; gap: 16px; }
+  .chart-sections-row .grouped-bar-row { gap: 24px; padding: 16px 8px 8px; }
+  .grouped-bar-row { gap: 24px; padding: 20px 12px 10px; overflow-x: auto; }
+  .bar-column .vbar { width: 36px; height: 160px; }
+  .bar-group-label { font-size: 11px; max-width: 70px; }
+}
+
+/* ===== Chart Sections Side-by-side Row ===== */
+.chart-sections-row {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+}
+.chart-sections-row .grouped-bar-section {
+  flex: 1;
+  min-width: 0;
+}
+.chart-sections-row .grouped-bar-row {
+  gap: 32px;
+  padding: 20px 12px 10px;
+}
+.chart-sections-row .sub-section-title {
+  margin-bottom: 10px;
+}
+.chart-sections-row .grouped-bar-section {
+  margin-bottom: 0;
+}
+
+/* ===== Grouped Stacked Bar Chart (Equal Height) ===== */
+.grouped-bar-section {
+  margin-bottom: 12px;
+}
+.grouped-bar-row {
+  display: flex;
+  gap: 44px;
+  justify-content: center;
+  align-items: stretch;
+  padding: 24px 24px 14px;
+  background: #fafbfc;
+  border-radius: 12px;
+  border: 1px solid #eef1f5;
+}
+.bar-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.bar-pair {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+.bar-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.bar-column .vbar {
+  width: 44px;
+  height: 190px;
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04);
+}
+.vbar-segment {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 2px;
+  min-height: 22px;
+  line-height: 1.2;
+  font-size: 10px;
+  color: #fff;
+  font-weight: 700;
+  border-top: 1px solid rgba(255,255,255,0.25);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.15);
+}
+.vbar-segment:first-child { border-top: none; }
+.vbar-segment .seg-pct {
+  font-weight: 500;
+  opacity: 0.92;
+  font-size: 9px;
+}
+.seg-ai { background: linear-gradient(180deg, #81D4FA 0%, #4FC3F7 100%); }
+.seg-robot { background: linear-gradient(180deg, #FFCC80 0%, #FFB74D 100%); }
+.seg-science { background: linear-gradient(180deg, #A5D6A7 0%, #81C784 100%); }
+/* subtle distinction for previous-period bars */
+.bar-column .vbar.previous {
+  opacity: 0.88;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.04);
+}
+.bar-column .bar-period-tag {
+  font-size: 11px;
+  color: #555;
+  font-weight: 600;
+  white-space: nowrap;
+  background: #eef1f5;
+  padding: 3px 12px;
+  border-radius: 10px;
+  letter-spacing: 0.3px;
+}
+.bar-group-label {
+  font-size: 13px;
+  color: #333;
+  font-weight: 600;
+  max-width: 110px;
+  text-align: center;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ===== Sortable Column Headers ===== */
+.sortable-th {
+  cursor: pointer; user-select: none; position: relative;
+  padding-right: 28px !important; transition: background .15s;
+}
+.sortable-th:hover { background: #e8ecf2 !important; }
+.sortable-th .sort-icon {
+  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  font-size: 11px; color: #bbb; line-height: 1;
+}
+.sortable-th.sort-asc .sort-icon { color: #1a73e8; }
+.sortable-th.sort-desc .sort-icon { color: #1a73e8; }
+
+/* ===== Advanced Filter Panel ===== */
+.adv-filter-panel {
+  background: #f8f9fb; border-radius: 12px; padding: 18px 20px;
+  margin-bottom: 18px; display: flex; flex-wrap: wrap; gap: 14px;
+  align-items: flex-end; border: 1px solid #eef0f4;
+}
+.adv-filter-group {
+  display: flex; flex-direction: column; gap: 5px; min-width: 140px;
+}
+.adv-filter-label {
+  font-size: 11px; color: #777; font-weight: 500;
+}
+.adv-filter-controls {
+  display: flex; gap: 4px; align-items: center;
+}
+.adv-filter-controls select {
+  padding: 6px 8px; border-radius: 6px; border: 1px solid #d0d5dd;
+  font-size: 12px; background: #fff; color: #333; min-width: 55px;
+}
+.adv-filter-controls input {
+  padding: 6px 10px; border-radius: 6px; border: 1px solid #d0d5dd;
+  font-size: 12px; background: #fff; color: #333; width: 100px;
+}
+.adv-filter-controls select:focus,
+.adv-filter-controls input:focus { border-color: #1a73e8; outline: none; }
+.adv-filter-clear {
+  padding: 6px 16px; border-radius: 6px; border: 1px solid #d0d5dd;
+  font-size: 12px; cursor: pointer; background: #fff; color: #888;
+  transition: all .15s; white-space: nowrap;
+}
+.adv-filter-clear:hover { background: #fee; border-color: #e57373; color: #c62828; }
+.adv-filter-active {
+  font-size: 11px; color: #1a73e8; margin-left: 6px;
+}
+.sort-reset {
+  padding: 6px 14px; border-radius: 6px; border: 1px solid #d0d5dd;
+  font-size: 12px; cursor: pointer; background: #fff; color: #888;
+  transition: all .15s;
+}
+.sort-reset:hover { border-color: #1a73e8; color: #1a73e8; }
+
+/* ===== Responsive ===== */
+@media (max-width: 900px) {
+  .metric-row.col-3, .metric-row.col-4 { grid-template-columns: 1fr 1fr; }
+  .grid-2 { grid-template-columns: 1fr; }
+  .content { padding: 16px; }
+  .global-header { padding: 14px 20px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ===== Global Header ===== -->
+<div class="global-header">
+  <div>
+    <h1>储备数据可视化看板</h1>
+    <div class="subtitle">Reserve Data Visualization Dashboard</div>
+  </div>
+  <div class="header-right">
+  <div class="header-filter">
+    <span class="header-filter-label">班期版本</span>
+    <select id="batch-select" onchange="onBatchChange(this.value)">
+      <option value="2026-3月班期-V1">2026-3月班期-V1</option>
+    </select>
+  </div>
+  <div class="header-filter" style="margin-top:2px;" id="region-filter-box">
+    <span class="header-filter-label">片区</span>
+    <div class="multi-select" id="region-select-wrapper">
+      <div class="multi-select-trigger" onclick="toggleMultiSelect('region')">
+        <span class="multi-select-text" id="region-text">全部片区</span>
+      </div>
+      <div class="multi-select-dropdown" id="region-dropdown" style="display:none;">
+        <div class="multi-select-options" id="region-options"></div>
+        <div class="multi-select-footer">
+          <button class="multi-select-btn" onclick="resetMultiSelect('region')">重置</button>
+          <button class="multi-select-btn primary" onclick="confirmMultiSelect('region')">确定</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="header-filter" style="margin-top:2px;" id="province-filter-box">
+    <span class="header-filter-label">省份</span>
+    <div class="multi-select" id="province-select-wrapper">
+      <div class="multi-select-trigger" onclick="toggleMultiSelect('province')">
+        <span class="multi-select-text" id="province-text">全部省份</span>
+      </div>
+      <div class="multi-select-dropdown" id="province-dropdown" style="display:none;">
+        <div class="multi-select-options" id="province-options"></div>
+        <div class="multi-select-footer">
+          <button class="multi-select-btn" onclick="resetMultiSelect('province')">重置</button>
+          <button class="multi-select-btn primary" onclick="confirmMultiSelect('province')">确定</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  </div>
+</div>
+
+<!-- ===== Main Navigation ===== -->
+<div class="main-nav">
+  <button class="main-nav-btn active" onclick="switchMain(this, 'single')">本期看板</button>
+  <button class="main-nav-btn" onclick="switchMain(this, 'compare')">两期对比看板</button>
+</div>
+
+<!-- ==================== 本期看板 ==================== -->
+<div id="main-single">
+  <div class="sub-nav" id="sub-single">
+    <button class="sub-nav-btn active" onclick="switchSub(this, 'single','A')">总览与课线</button>
+    <button class="sub-nav-btn" onclick="switchSub(this, 'single','B')">片区</button>
+    <button class="sub-nav-btn" onclick="switchSub(this, 'single','D')">地区</button>
+    <button class="sub-nav-btn" onclick="switchSub(this, 'single','C')">BD</button>
+  </div>
+
+  <div class="content">
+
+    <!-- ===== 单期 A: 总览与课线 (1.1 + 1.2) ===== -->
+    <div class="section active" id="single-A">
+      <div class="section-header">
+        <h2>总储备看板</h2>
+        <span class="badge">总览</span>
+      </div>
+
+      <!-- 业绩 + 储备 同行布局 -->
+      <div class="overview-row">
+
+        <!-- 业绩板块 -->
+        <div class="card overview-panel">
+          <div class="card-title">业绩板块</div>
+          <div class="metric-row col-2 overview-metric-row">
+            <div class="metric-card highlight">
+              <div class="metric-label">总预测业绩</div>
+              <div class="metric-value">100<span class="unit">w</span></div>
+              <div class="metric-sub">
+                <div class="metric-sub-item">已达成业绩: <span>72w</span></div>
+                <div class="metric-sub-item">预估业绩: <span>28w</span></div>
+              </div>
+              <div class="progress-wrap">
+                <div class="progress-bar"><div class="progress-fill blue" style="width:72%"></div></div>
+                <div class="progress-info"><span>达成率 72%</span><span>目标业绩 140w</span></div>
+              </div>
+            </div>
+            <div class="metric-card highlight-orange">
+              <div class="metric-label">冲高总预测业绩</div>
+              <div class="metric-value">150<span class="unit">w</span></div>
+              <div class="metric-sub">
+                <div class="metric-sub-item">已达成业绩: <span>87w</span></div>
+                <div class="metric-sub-item">预估业绩: <span>63w</span></div>
+              </div>
+              <div class="progress-wrap">
+                <div class="progress-bar"><div class="progress-fill orange" style="width:58%"></div></div>
+                <div class="progress-info"><span>达成率 58%</span><span>目标业绩 260w</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 储备板块 -->
+        <div class="card overview-panel">
+          <div class="card-title">储备板块</div>
+          <div class="metric-row col-2 overview-metric-row">
+            <div class="metric-card highlight">
+              <div class="metric-label">总储备量</div>
+              <div class="metric-value">2,400</div>
+              <div class="metric-sub">
+                <div class="metric-sub-item">已进线量: <span>800</span></div>
+                <div class="metric-sub-item">储备量: <span>1,600</span></div>
+              </div>
+              <div class="overview-spacer"></div>
+            </div>
+            <div class="metric-card highlight-orange">
+              <div class="metric-label">冲高总储备量</div>
+              <div class="metric-value">3,200</div>
+              <div class="metric-sub">
+                <div class="metric-sub-item">已进线量: <span>1,000</span></div>
+                <div class="metric-sub-item">冲高储备量: <span>2,200</span></div>
+              </div>
+              <div class="overview-spacer"></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 课线项目分隔线 -->
+      <div class="section-divider"></div>
+
+      <div class="section-header">
+        <h2>课线项目看板</h2>
+        <span class="badge">课线</span>
+      </div>
+
+      <div class="toggle-group">
+        <button class="toggle-btn active" onclick="toggleMode(this)">保底</button>
+        <button class="toggle-btn" onclick="toggleMode(this)">冲高</button>
+      </div>
+
+      <!-- 1.2.1 所有项目汇总：4个班期 -->
+      <div class="card project-section">
+        <div class="card-title">全部项目汇总 - 班期看板</div>
+        <table class="wire-table" id="tbl-summary">
+          <thead>
+            <tr>
+              <th>班期</th>
+              <th class="sortable-th" onclick="sortTable('tbl-summary',0,true)">总储备量<span class="sort-icon">↕</span></th>
+              <th class="sortable-th" onclick="sortTable('tbl-summary',1,true)">已进线量<span class="sort-icon">↕</span></th>
+              <th class="sortable-th" onclick="sortTable('tbl-summary',2,true)">储备量<span class="sort-icon">↕</span></th>
+              <th class="sortable-th" onclick="sortTable('tbl-summary',3,true)">总预测业绩<span class="sort-icon">↕</span></th>
+              <th class="sortable-th" onclick="sortTable('tbl-summary',4,true)">已达成预测业绩<span class="sort-icon">↕</span></th>
+              <th class="sortable-th" onclick="sortTable('tbl-summary',5,true)">预测业绩<span class="sort-icon">↕</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>2026-09</td>
+              <td>1,890</td><td>520</td><td>800</td><td>261w</td><td>72w</td><td>111w</td>
+            </tr>
+            <tr>
+              <td>2026-10</td>
+              <td>1,000</td><td>147</td><td>420</td><td>136w</td><td>20w</td><td>58w</td>
+            </tr>
+            <tr>
+              <td>2026-11</td>
+              <td>360</td><td>18</td><td>150</td><td>43w</td><td>2.2w</td><td>18w</td>
+            </tr>
+            <tr>
+              <td>2026-12</td>
+              <td>75</td><td>1</td><td>30</td><td>8w</td><td>0.1w</td><td>3w</td>
+            </tr>
+            <tr class="total-row" style="background:#f5f7fa;font-weight:600;">
+              <td>总计</td>
+              <td>3,325</td><td>686</td><td>1,400</td><td>448w</td><td>94.3w</td><td>190w</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 1.2.2 AI无盒：4个班期 -->
+      <div class="card project-section">
+        <div class="card-title">AI无盒 - 课线班期看板</div>
+        <table class="wire-table" id="tbl-ai">
+          <thead>
+            <tr>
+              <th>项目名称</th><th>班期</th>
+              <th class="sortable-th" onclick="sortTable('tbl-ai',0,true)">招生进度<span class="sort-icon">↕</span></th>
+              <th class="sortable-th" onclick="sortTable('tbl-ai',1,true)">总储备量<span class="sort-icon">↕</span></th>
+              <th class="sortable-th" onclick="sortTable('tbl-ai',2,true)">已进线量<span class="sort-icon">↕</span></th>
+              <th class="sortable-th" onclick="sortTable('tbl-ai',3,true)">储备量<span class="sort-icon">↕</span></th>
+              <th class="sortable-th" onclick="sortTable('tbl-ai',4,true)">总预测业绩<span class="sort-icon">↕</span></th>
+              <th class="sortable-th" onclick="sortTable('tbl-ai',5,true)">已达成预测业绩<span class="sort-icon">↕</span></th>
+              <th class="sortable-th" onclick="sortTable('tbl-ai',6,true)">预测业绩<span class="sort-icon">↕</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>AI-无盒</td><td>2026-09</td>
+              <td>已结束</td>
+              <td>770</td><td>208</td><td>320</td><td>110w</td><td>31w</td><td>48w</td>
+            </tr>
+            <tr>
+              <td>AI-无盒</td><td>2026-10</td>
+              <td>招生中</td>
+              <td>430</td><td>72</td><td>180</td><td>61w</td><td>10w</td><td>26w</td>
+            </tr>
+            <tr>
+              <td>AI-无盒</td><td>2026-11</td>
+              <td>未启动</td>
+              <td>155</td><td>10</td><td>65</td><td>20w</td><td>1.2w</td><td>8w</td>
+            </tr>
+            <tr>
+              <td>AI-无盒</td><td>2026-12</td>
+              <td>未启动</td>
+              <td>30</td><td>0</td><td>12</td><td>3.7w</td><td>0</td><td>1.5w</td>
+            </tr>
+            <tr class="total-row" style="background:#f5f7fa;font-weight:600;">
+              <td colspan="2">总计</td><td>-</td>
+              <td>1,385</td><td>290</td><td>577</td><td>194.7w</td><td>42.2w</td><td>83.5w</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 1.2.3 机器人：4个班期 -->
+      <div class="card project-section">
+        <div class="card-title">机器人 - 课线班期看板</div>
+        <table class="wire-table" id="tbl-robot">
+          <thead>
+            <tr>
+              <th>项目名称</th><th>班期</th>
+              <th class="sortable-th" onclick="sortTable('tbl-robot',0,true)">招生进度<span class="sort-icon">↕</span></th>
+              <th class="sortable-th" onclick="sortTable('tbl-robot',1,true)">总储备量<span class="sort-icon">↕</span></th>
+              <th class="sortable-th" onclick="sortTable('tbl-robot',2,true)">已进线量<span class="sort-icon">↕</span></th>
+              <th class="sortable-th" onclick="sortTable('tbl-robot',3,true)">储备量<span class="sort-icon">↕</span></th>
+              <th class="sortable-th" onclick="sortTable('tbl-robot',4,true)">总预测业绩<span class="sort-icon">↕</span></th>
+              <th class="sortable-th" onclick="sortTable('tbl-robot',5,true)">已达成预测业绩<span class="sort-icon">↕</span></th>
+              <th class="sortable-th" onclick="sortTable('tbl-robot',6,true)">预测业绩<span class="sort-icon">↕</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>机器人</td><td>2026-09</td>
+              <td>招生中</td>
+              <td>660</td><td>118</td><td>280</td><td>85w</td><td>15w</td><td>35w</td>
+            </tr>
+            <tr>
+              <td>机器人</td><td>2026-10</td>
+              <td>招生中</td>
+              <td>360</td><td>42</td><td>150</td><td>48w</td><td>6w</td><td>20w</td>
+            </tr>
+            <tr>
+              <td>机器人</td><td>2026-11</td>
+              <td>未启动</td>
+              <td>120</td><td>4</td><td>50</td><td>15w</td><td>0.5w</td><td>6w</td>
+            </tr>
+            <tr>
+              <td>机器人</td><td>2026-12</td>
+              <td>未启动</td>
+              <td>25</td><td>0</td><td>10</td><td>2.5w</td><td>0</td><td>1w</td>
+            </tr>
+            <tr class="total-row" style="background:#f5f7fa;font-weight:600;">
+              <td colspan="2">总计</td><td>-</td>
+              <td>1,165</td><td>164</td><td>490</td><td>150.5w</td><td>21.5w</td><td>62w</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 1.2.4 科学有盒：4个班期 -->
+      <div class="card project-section">
+        <div class="card-title">科学有盒 - 课线班期看板</div>
+        <table class="wire-table" id="tbl-science">
+          <thead>
+            <tr>
+              <th>项目名称</th><th>班期</th>
+              <th class="sortable-th" onclick="sortTable('tbl-science',0,true)">招生进度<span class="sort-icon">↕</span></th>
+              <th class="sortable-th" onclick="sortTable('tbl-science',1,true)">总储备量<span class="sort-icon">↕</span></th>
+              <th class="sortable-th" onclick="sortTable('tbl-science',2,true)">已进线量<span class="sort-icon">↕</span></th>
+              <th class="sortable-th" onclick="sortTable('tbl-science',3,true)">储备量<span class="sort-icon">↕</span></th>
+              <th class="sortable-th" onclick="sortTable('tbl-science',4,true)">总预测业绩<span class="sort-icon">↕</span></th>
+              <th class="sortable-th" onclick="sortTable('tbl-science',5,true)">已达成预测业绩<span class="sort-icon">↕</span></th>
+              <th class="sortable-th" onclick="sortTable('tbl-science',6,true)">预测业绩<span class="sort-icon">↕</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>科学-有盒</td><td>2026-09</td>
+              <td>已结束</td>
+              <td>460</td><td>160</td><td>200</td><td>66w</td><td>22w</td><td>28w</td>
+            </tr>
+            <tr>
+              <td>科学-有盒</td><td>2026-10</td>
+              <td>招生中</td>
+              <td>280</td><td>60</td><td>120</td><td>38w</td><td>8w</td><td>16w</td>
+            </tr>
+            <tr>
+              <td>科学-有盒</td><td>2026-11</td>
+              <td>未启动</td>
+              <td>120</td><td>10</td><td>50</td><td>16w</td><td>1.4w</td><td>7w</td>
+            </tr>
+            <tr>
+              <td>科学-有盒</td><td>2026-12</td>
+              <td>未启动</td>
+              <td>20</td><td>0</td><td>8</td><td>2.5w</td><td>0</td><td>1w</td>
+            </tr>
+            <tr class="total-row" style="background:#f5f7fa;font-weight:600;">
+              <td colspan="2">总计</td><td>-</td>
+              <td>880</td><td>230</td><td>378</td><td>122.5w</td><td>31.4w</td><td>52w</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ===== 单期 B: 片区 (1.3) ===== -->
+    <div class="section" id="single-B">
+      <div class="section-header">
+        <h2>片区-总储备看板</h2>
+        <span class="badge">片区</span>
+      </div>
+
+      <div class="toggle-group">
+        <button class="toggle-btn active" onclick="toggleMode(this)">保底</button>
+        <button class="toggle-btn" onclick="toggleMode(this)">冲高</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">片区-业绩看板</div>
+        <table class="wire-table">
+          <thead>
+            <tr>
+              <th>片区</th>
+              <th>预测业绩目标</th>
+              <th>总预测业绩</th>
+              <th>总预测业绩达标率</th>
+              <th>已达成预测业绩</th>
+              <th>预测业绩</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>全国</td><td>350w</td><td>320w</td>
+              <td class="progress-cell">91% <div class="mini-progress"><div class="fill" style="width:91%;background:#4fc3f7"></div></div></td>
+              <td>250w</td><td>280w</td>
+            </tr>
+            <tr>
+              <td>粤海片区</td><td>200w</td><td>180w</td>
+              <td class="progress-cell">90% <div class="mini-progress"><div class="fill" style="width:90%;background:#4fc3f7"></div></div></td>
+              <td>140w</td><td>160w</td>
+            </tr>
+            <tr>
+              <td>浙闽片区</td><td>150w</td><td>140w</td>
+              <td class="progress-cell">93% <div class="mini-progress"><div class="fill" style="width:93%;background:#4fc3f7"></div></div></td>
+              <td>110w</td><td>120w</td>
+            </tr>
+            <tr><td>...</td><td>...</td><td>...</td><td>...</td><td>...</td><td>...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <div class="card-title">片区-储备看板</div>
+        <table class="wire-table">
+          <thead>
+            <tr>
+              <th>片区</th>
+              <th>总储备量</th>
+              <th>已进线量</th>
+              <th>储备量</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>全国</td><td>1200</td><td>600</td><td>1000</td>
+            </tr>
+            <tr>
+              <td>粤海片区</td><td>700</td><td>350</td><td>600</td>
+            </tr>
+            <tr>
+              <td>浙闽片区</td><td>500</td><td>250</td><td>400</td>
+            </tr>
+            <tr><td>...</td><td>...</td><td>...</td><td>...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="section-header">
+        <h2>片区-分课线项目看板</h2>
+        <span class="badge">分课线</span>
+      </div>
+
+      <div class="toggle-group">
+        <button class="toggle-btn active" onclick="toggleMode(this)">保底</button>
+        <button class="toggle-btn" onclick="toggleMode(this)">冲高</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">【业绩】片区-课线预测业绩对比</div>
+        <div class="bar-chart-wire">
+          <div class="bar-row"><div class="bar-label">粤海片区</div>
+            <div class="bar-track" style="flex:1">
+              <div style="position:absolute;left:0;width:40%;height:100%;background:#4FC3F7;opacity:0.88;border-radius:5px 0 0 5px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:600;">92k / 40%</div>
+              <div style="position:absolute;left:40%;width:35%;height:100%;background:#FFB74D;opacity:0.88;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:600;">80k / 35%</div>
+              <div style="position:absolute;left:75%;width:25%;height:100%;background:#81C784;opacity:0.88;border-radius:0 5px 5px 0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:600;">58k / 25%</div>
+            </div>
+          </div>
+          <div class="bar-row"><div class="bar-label">浙闽片区</div>
+            <div class="bar-track" style="flex:1">
+              <div style="position:absolute;left:0;width:33%;height:100%;background:#4FC3F7;opacity:0.88;border-radius:5px 0 0 5px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:600;">75k / 39%</div>
+              <div style="position:absolute;left:33%;width:27%;height:100%;background:#FFB74D;opacity:0.88;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:600;">63k / 33%</div>
+              <div style="position:absolute;left:60%;width:23%;height:100%;background:#81C784;opacity:0.88;border-radius:0 5px 5px 0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:600;">52k / 27%</div>
+            </div>
+          </div>
+          <div class="bar-row"><div class="bar-label">云桂黔片区</div>
+            <div class="bar-track" style="flex:1">
+              <div style="position:absolute;left:0;width:24%;height:100%;background:#4FC3F7;opacity:0.88;border-radius:5px 0 0 5px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:600;">55k / 35%</div>
+              <div style="position:absolute;left:24%;width:27%;height:100%;background:#FFB74D;opacity:0.88;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:600;">62k / 40%</div>
+              <div style="position:absolute;left:51%;width:17%;height:100%;background:#81C784;opacity:0.88;border-radius:0 5px 5px 0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:600;">38k / 25%</div>
+            </div>
+          </div>
+          <div class="bar-legend">
+            <span><span class="legend-dot" style="background:#4FC3F7"></span>AI-无盒</span>
+            <span><span class="legend-dot" style="background:#FFB74D"></span>机器人</span>
+            <span><span class="legend-dot" style="background:#81C784"></span>科学-有盒</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">【储备】片区-课线储备量对比</div>
+        <div class="bar-chart-wire">
+          <div class="bar-row"><div class="bar-label">粤海片区</div>
+            <div class="bar-track" style="flex:1">
+              <div style="position:absolute;left:0;width:38%;height:100%;background:#4FC3F7;opacity:0.88;border-radius:5px 0 0 5px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:600;">620 / 38%</div>
+              <div style="position:absolute;left:38%;width:35%;height:100%;background:#FFB74D;opacity:0.88;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:600;">570 / 35%</div>
+              <div style="position:absolute;left:73%;width:27%;height:100%;background:#81C784;opacity:0.88;border-radius:0 5px 5px 0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:600;">460 / 27%</div>
+            </div>
+          </div>
+          <div class="bar-row"><div class="bar-label">浙闽片区</div>
+            <div class="bar-track" style="flex:1">
+              <div style="position:absolute;left:0;width:32%;height:100%;background:#4FC3F7;opacity:0.88;border-radius:5px 0 0 5px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:600;">520 / 38%</div>
+              <div style="position:absolute;left:32%;width:24%;height:100%;background:#FFB74D;opacity:0.88;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:600;">400 / 29%</div>
+              <div style="position:absolute;left:56%;width:28%;height:100%;background:#81C784;opacity:0.88;border-radius:0 5px 5px 0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:600;">460 / 33%</div>
+            </div>
+          </div>
+          <div class="bar-row"><div class="bar-label">云桂黔片区</div>
+            <div class="bar-track" style="flex:1">
+              <div style="position:absolute;left:0;width:21%;height:100%;background:#4FC3F7;opacity:0.88;border-radius:5px 0 0 5px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:600;">350 / 33%</div>
+              <div style="position:absolute;left:21%;width:27%;height:100%;background:#FFB74D;opacity:0.88;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:600;">440 / 42%</div>
+              <div style="position:absolute;left:48%;width:16%;height:100%;background:#81C784;opacity:0.88;border-radius:0 5px 5px 0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:600;">270 / 25%</div>
+            </div>
+          </div>
+          <div class="bar-legend">
+            <span><span class="legend-dot" style="background:#4FC3F7"></span>AI-无盒</span>
+            <span><span class="legend-dot" style="background:#FFB74D"></span>机器人</span>
+            <span><span class="legend-dot" style="background:#81C784"></span>科学-有盒</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">片区-分课线储备看板</div>
+        <div class="toggle-group" style="margin-bottom:12px;">
+          <button class="toggle-btn active" onclick="switchProject(this,'proj-ai')">AI-无盒</button>
+          <button class="toggle-btn" onclick="switchProject(this,'proj-robot')">机器人</button>
+          <button class="toggle-btn" onclick="switchProject(this,'proj-science')">科学-有盒</button>
+        </div>
+
+        <div id="proj-ai" class="project-table-wrap">
+          <table class="wire-table">
+            <thead>
+              <tr><th>课线名称</th><th>片区</th><th>储备量</th><th>预测业绩</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>总计</td><td>全国</td><td>1490</td><td>222000</td></tr>
+              <tr><td>粤海片区</td><td>粤海片区</td><td>620</td><td>92000</td></tr>
+              <tr><td>浙闽片区</td><td>浙闽片区</td><td>520</td><td>75000</td></tr>
+              <tr><td>云桂黔片区</td><td>云桂黔片区</td><td>350</td><td>55000</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div id="proj-robot" class="project-table-wrap" style="display:none;">
+          <table class="wire-table">
+            <thead>
+              <tr><th>课线名称</th><th>片区</th><th>储备量</th><th>预测业绩</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>总计</td><td>全国</td><td>1470</td><td>203000</td></tr>
+              <tr><td>粤海片区</td><td>粤海片区</td><td>570</td><td>80000</td></tr>
+              <tr><td>浙闽片区</td><td>浙闽片区</td><td>400</td><td>63000</td></tr>
+              <tr><td>云桂黔片区</td><td>云桂黔片区</td><td>440</td><td>62000</td></tr>
+              <tr><td>苏鲁豫片区</td><td>苏鲁豫片区</td><td>60</td><td>—</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div id="proj-science" class="project-table-wrap" style="display:none;">
+          <table class="wire-table">
+            <thead>
+              <tr><th>课线名称</th><th>片区</th><th>储备量</th><th>预测业绩</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>总计</td><td>全国</td><td>1190</td><td>148000</td></tr>
+              <tr><td>粤海片区</td><td>粤海片区</td><td>460</td><td>58000</td></tr>
+              <tr><td>浙闽片区</td><td>浙闽片区</td><td>460</td><td>52000</td></tr>
+              <tr><td>云桂黔片区</td><td>云桂黔片区</td><td>270</td><td>38000</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 单期 D: 地区（省份 + 城市）(1.4 + 1.5) ===== -->
+    <div class="section" id="single-D">
+      <!-- 1.4 省份 -->
+      <div class="section-header">
+        <h2>省份看板</h2>
+        <span class="badge">省份</span>
+      </div>
+
+      <div class="toggle-group">
+        <button class="toggle-btn active" onclick="toggleMode(this)">保底</button>
+        <button class="toggle-btn" onclick="toggleMode(this)">冲高</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">省份-业绩看板</div>
+        <table class="wire-table">
+          <thead>
+            <tr>
+              <th>片区</th><th>省份</th><th>预测业绩目标</th>
+              <th>总预测业绩</th><th>总预测业绩达标率</th>
+              <th>已达成预测业绩</th><th>预测业绩</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>粤海片区</td><td>广东省</td><td>120w</td><td>105w</td>
+              <td class="progress-cell">88% <div class="mini-progress"><div class="fill" style="width:88%;background:#4fc3f7"></div></div></td>
+              <td>78w</td><td>90w</td>
+            </tr>
+            <tr>
+              <td>云桂黔片区</td><td>广西壮族自治区</td><td>80w</td><td>70w</td>
+              <td class="progress-cell">88% <div class="mini-progress"><div class="fill" style="width:88%;background:#4fc3f7"></div></div></td>
+              <td>52w</td><td>60w</td>
+            </tr>
+            <tr><td>...</td><td>...</td><td>...</td><td>...</td><td>...</td><td>...</td><td>...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <div class="card-title">省份-储备看板</div>
+        <table class="wire-table">
+          <thead>
+            <tr>
+              <th>片区</th><th>省份</th><th>总储备量</th><th>已进线量</th><th>储备量</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>粤海片区</td><td>广东省</td><td>700</td><td>380</td><td>600</td>
+            </tr>
+            <tr>
+              <td>云桂黔片区</td><td>广西壮族自治区</td><td>420</td><td>240</td><td>360</td>
+            </tr>
+            <tr><td>...</td><td>...</td><td>...</td><td>...</td><td>...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="section-divider"></div>
+
+      <!-- 1.5 城市 -->
+      <div class="section-header">
+        <h2>城市看板</h2>
+        <span class="badge">城市</span>
+      </div>
+
+      <div class="toggle-group">
+        <button class="toggle-btn active" onclick="toggleMode(this)">保底</button>
+        <button class="toggle-btn" onclick="toggleMode(this)">冲高</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">城市 - 总储备看板</div>
+        <div class="scroll-table-wrap">
+        <table class="wire-table">
+          <thead>
+            <tr>
+              <th>片区</th><th>省份</th><th>城市</th>
+              <th>储备量</th><th>预测业绩</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>粤海片区</td><td>广东省</td><td>深圳市</td><td>350</td><td>90w</td></tr>
+            <tr><td>粤海片区</td><td>广东省</td><td>广州市</td><td>230</td><td>60w</td></tr>
+            <tr><td>粤海片区</td><td>广东省</td><td>东莞市</td><td>180</td><td>45w</td></tr>
+            <tr><td>粤海片区</td><td>广东省</td><td>佛山市</td><td>150</td><td>38w</td></tr>
+            <tr><td>粤海片区</td><td>广东省</td><td>珠海市</td><td>120</td><td>30w</td></tr>
+            <tr><td>粤海片区</td><td>广东省</td><td>惠州市</td><td>100</td><td>25w</td></tr>
+            <tr><td>粤海片区</td><td>广东省</td><td>中山市</td><td>85</td><td>21w</td></tr>
+            <tr><td>粤海片区</td><td>广东省</td><td>汕头市</td><td>70</td><td>18w</td></tr>
+            <tr><td>粤海片区</td><td>广东省</td><td>湛江市</td><td>55</td><td>14w</td></tr>
+            <tr><td>粤海片区</td><td>广东省</td><td>茂名市</td><td>45</td><td>11w</td></tr>
+            <tr><td>云桂黔片区</td><td>广西壮族自治区</td><td>南宁市</td><td>90</td><td>22w</td></tr>
+            <tr><td>浙闽片区</td><td>福建省</td><td>福州市</td><td>80</td><td>20w</td></tr>
+            <tr><td>浙闽片区</td><td>福建省</td><td>厦门市</td><td>65</td><td>16w</td></tr>
+            <tr><td>浙闽片区</td><td>福建省</td><td>泉州市</td><td>50</td><td>12w</td></tr>
+            <tr><td>粤海片区</td><td>海南省</td><td>海口市</td><td>35</td><td>8w</td></tr>
+          </tbody>
+        </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">城市-分课线看板</div>
+        <div class="toggle-group" style="margin-bottom:12px;">
+          <button class="toggle-btn active" onclick="switchProject(this,'city-ai')">AI-无盒</button>
+          <button class="toggle-btn" onclick="switchProject(this,'city-robot')">机器人</button>
+          <button class="toggle-btn" onclick="switchProject(this,'city-science')">科学-有盒</button>
+        </div>
+
+        <div id="city-ai" class="project-table-wrap">
+          <div class="scroll-table-wrap">
+          <table class="wire-table">
+            <thead>
+              <tr><th>课线</th><th>片区</th><th>省份</th><th>城市</th><th>储备量</th><th>预测业绩</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>AI-无盒</td><td>粤海片区</td><td>广东省</td><td>深圳市</td><td>200</td><td>50w</td></tr>
+              <tr><td>AI-无盒</td><td>粤海片区</td><td>广东省</td><td>广州市</td><td>140</td><td>38w</td></tr>
+              <tr><td>AI-无盒</td><td>云桂黔片区</td><td>广西壮族自治区</td><td>南宁市</td><td>80</td><td>20w</td></tr>
+              <tr><td>AI-无盒</td><td>粤海片区</td><td>广东省</td><td>东莞市</td><td>110</td><td>28w</td></tr>
+              <tr><td>AI-无盒</td><td>粤海片区</td><td>广东省</td><td>佛山市</td><td>95</td><td>24w</td></tr>
+              <tr><td>AI-无盒</td><td>浙闽片区</td><td>福建省</td><td>福州市</td><td>75</td><td>18w</td></tr>
+              <tr><td>AI-无盒</td><td>粤海片区</td><td>广东省</td><td>珠海市</td><td>65</td><td>16w</td></tr>
+              <tr><td>AI-无盒</td><td>浙闽片区</td><td>福建省</td><td>厦门市</td><td>50</td><td>12w</td></tr>
+              <tr><td>AI-无盒</td><td>粤海片区</td><td>广东省</td><td>惠州市</td><td>45</td><td>11w</td></tr>
+              <tr><td>AI-无盒</td><td>粤海片区</td><td>海南省</td><td>海口市</td><td>30</td><td>7w</td></tr>
+              <tr><td>AI-无盒</td><td>粤海片区</td><td>广东省</td><td>中山市</td><td>35</td><td>9w</td></tr>
+              <tr><td>AI-无盒</td><td>浙闽片区</td><td>福建省</td><td>泉州市</td><td>25</td><td>6w</td></tr>
+              <tr><td>AI-无盒</td><td>粤海片区</td><td>广东省</td><td>汕头市</td><td>20</td><td>5w</td></tr>
+              <tr><td>AI-无盒</td><td>粤海片区</td><td>广东省</td><td>湛江市</td><td>15</td><td>4w</td></tr>
+              <tr><td>AI-无盒</td><td>粤海片区</td><td>广东省</td><td>茂名市</td><td>10</td><td>3w</td></tr>
+            </tbody>
+          </table>
+          </div>
+        </div>
+
+        <div id="city-robot" class="project-table-wrap" style="display:none;">
+          <div class="scroll-table-wrap">
+          <table class="wire-table">
+            <thead>
+              <tr><th>课线</th><th>片区</th><th>省份</th><th>城市</th><th>储备量</th><th>预测业绩</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>机器人</td><td>粤海片区</td><td>广东省</td><td>深圳市</td><td>150</td><td>42w</td></tr>
+              <tr><td>机器人</td><td>粤海片区</td><td>广东省</td><td>广州市</td><td>100</td><td>28w</td></tr>
+              <tr><td>机器人</td><td>云桂黔片区</td><td>广西壮族自治区</td><td>南宁市</td><td>70</td><td>18w</td></tr>
+              <tr><td>机器人</td><td>粤海片区</td><td>广东省</td><td>东莞市</td><td>85</td><td>22w</td></tr>
+              <tr><td>机器人</td><td>浙闽片区</td><td>福建省</td><td>福州市</td><td>65</td><td>16w</td></tr>
+              <tr><td>机器人</td><td>粤海片区</td><td>广东省</td><td>佛山市</td><td>55</td><td>14w</td></tr>
+              <tr><td>机器人</td><td>粤海片区</td><td>广东省</td><td>珠海市</td><td>40</td><td>10w</td></tr>
+              <tr><td>机器人</td><td>浙闽片区</td><td>福建省</td><td>厦门市</td><td>35</td><td>8w</td></tr>
+              <tr><td>机器人</td><td>粤海片区</td><td>海南省</td><td>海口市</td><td>25</td><td>6w</td></tr>
+              <tr><td>机器人</td><td>粤海片区</td><td>广东省</td><td>惠州市</td><td>30</td><td>7w</td></tr>
+              <tr><td>机器人</td><td>粤海片区</td><td>广东省</td><td>中山市</td><td>20</td><td>5w</td></tr>
+              <tr><td>机器人</td><td>浙闽片区</td><td>福建省</td><td>泉州市</td><td>15</td><td>4w</td></tr>
+              <tr><td>机器人</td><td>粤海片区</td><td>广东省</td><td>汕头市</td><td>12</td><td>3w</td></tr>
+              <tr><td>机器人</td><td>粤海片区</td><td>广东省</td><td>湛江市</td><td>10</td><td>3w</td></tr>
+              <tr><td>机器人</td><td>粤海片区</td><td>广东省</td><td>茂名市</td><td>8</td><td>2w</td></tr>
+            </tbody>
+          </table>
+          </div>
+        </div>
+
+        <div id="city-science" class="project-table-wrap" style="display:none;">
+          <div class="scroll-table-wrap">
+          <table class="wire-table">
+            <thead>
+              <tr><th>课线</th><th>片区</th><th>省份</th><th>城市</th><th>储备量</th><th>预测业绩</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>科学-有盒</td><td>粤海片区</td><td>广东省</td><td>深圳市</td><td>120</td><td>35w</td></tr>
+              <tr><td>科学-有盒</td><td>粤海片区</td><td>广东省</td><td>广州市</td><td>90</td><td>22w</td></tr>
+              <tr><td>科学-有盒</td><td>云桂黔片区</td><td>广西壮族自治区</td><td>南宁市</td><td>60</td><td>15w</td></tr>
+              <tr><td>科学-有盒</td><td>粤海片区</td><td>广东省</td><td>东莞市</td><td>70</td><td>18w</td></tr>
+              <tr><td>科学-有盒</td><td>浙闽片区</td><td>福建省</td><td>福州市</td><td>55</td><td>14w</td></tr>
+              <tr><td>科学-有盒</td><td>粤海片区</td><td>广东省</td><td>佛山市</td><td>45</td><td>11w</td></tr>
+              <tr><td>科学-有盒</td><td>粤海片区</td><td>广东省</td><td>珠海市</td><td>35</td><td>9w</td></tr>
+              <tr><td>科学-有盒</td><td>浙闽片区</td><td>福建省</td><td>厦门市</td><td>30</td><td>7w</td></tr>
+              <tr><td>科学-有盒</td><td>粤海片区</td><td>海南省</td><td>海口市</td><td>20</td><td>5w</td></tr>
+              <tr><td>科学-有盒</td><td>粤海片区</td><td>广东省</td><td>惠州市</td><td>25</td><td>6w</td></tr>
+              <tr><td>科学-有盒</td><td>粤海片区</td><td>广东省</td><td>中山市</td><td>18</td><td>4w</td></tr>
+              <tr><td>科学-有盒</td><td>浙闽片区</td><td>福建省</td><td>泉州市</td><td>12</td><td>3w</td></tr>
+              <tr><td>科学-有盒</td><td>粤海片区</td><td>广东省</td><td>汕头市</td><td>10</td><td>3w</td></tr>
+              <tr><td>科学-有盒</td><td>粤海片区</td><td>广东省</td><td>湛江市</td><td>8</td><td>2w</td></tr>
+              <tr><td>科学-有盒</td><td>粤海片区</td><td>广东省</td><td>茂名市</td><td>5</td><td>1w</td></tr>
+            </tbody>
+          </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 单期 C: BD (1.6) ===== -->
+    <div class="section" id="single-C">
+      <div class="section-header">
+        <h2>BD 看板</h2>
+        <span class="badge">BD</span>
+      </div>
+
+      <div class="toggle-group">
+        <button class="toggle-btn active" onclick="toggleMode(this)">保底</button>
+        <button class="toggle-btn" onclick="toggleMode(this)">冲高</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">BD 排名看板</div>
+        <div class="grid-2">
+          <div style="border:1px solid #e0e4e8;border-radius:8px;padding:12px;overflow:hidden;">
+            <div class="card-subtitle">业绩排名</div>
+            <div class="scroll-bar-wrap" style="max-height:500px;">
+            <div class="bar-chart-wire">
+              <div class="bar-row">
+                <div class="bar-label">BD-张三</div>
+                <div class="bar-track" style="flex:1;">
+                  <div class="bar-fill-1" style="width:55.2%;background:#4fc3f7;opacity:0.85;border-radius:5px 0 0 5px;color:#fff;font-size:11px;line-height:24px;text-align:center;">80w</div>
+                  <div class="bar-fill-2" style="left:55.2%;width:44.8%;background:#81d4fa;opacity:0.85;border-radius:0 5px 5px 0;color:#333;font-size:11px;line-height:24px;text-align:center;">65w</div>
+                </div>
+              </div>
+              <div class="bar-row">
+                <div class="bar-label">BD-李四</div>
+                <div class="bar-track" style="flex:1;">
+                  <div class="bar-fill-1" style="width:41%;background:#4fc3f7;opacity:0.85;border-radius:5px 0 0 5px;color:#fff;font-size:11px;line-height:24px;text-align:center;">60w</div>
+                  <div class="bar-fill-2" style="left:41%;width:31%;background:#81d4fa;opacity:0.85;border-radius:0 5px 5px 0;color:#333;font-size:11px;line-height:24px;text-align:center;">45w</div>
+                </div>
+              </div>
+              <div class="bar-row">
+                <div class="bar-label">BD-王五</div>
+                <div class="bar-track" style="flex:1;">
+                  <div class="bar-fill-1" style="width:28%;background:#4fc3f7;opacity:0.85;border-radius:5px 0 0 5px;color:#fff;font-size:11px;line-height:24px;text-align:center;">40w</div>
+                  <div class="bar-fill-2" style="left:28%;width:19%;background:#81d4fa;opacity:0.85;border-radius:0 5px 5px 0;color:#333;font-size:11px;line-height:24px;text-align:center;">28w</div>
+                </div>
+              </div>
+              <div class="bar-row">
+                <div class="bar-label">BD-赵六</div>
+                <div class="bar-track" style="flex:1;">
+                  <div class="bar-fill-1" style="width:17%;background:#4fc3f7;opacity:0.85;border-radius:5px 0 0 5px;color:#fff;font-size:11px;line-height:24px;text-align:center;">25w</div>
+                  <div class="bar-fill-2" style="left:17%;width:10%;background:#81d4fa;opacity:0.85;border-radius:0 5px 5px 0;color:#333;font-size:11px;line-height:24px;text-align:center;">15w</div>
+                </div>
+              </div>
+              <div class="bar-row">
+                <div class="bar-label">BD-钱七</div>
+                <div class="bar-track" style="flex:1;">
+                  <div class="bar-fill-1" style="width:14%;background:#4fc3f7;opacity:0.85;border-radius:5px 0 0 5px;color:#fff;font-size:11px;line-height:24px;text-align:center;">20w</div>
+                  <div class="bar-fill-2" style="left:14%;width:8%;background:#81d4fa;opacity:0.85;border-radius:0 5px 5px 0;color:#333;font-size:11px;line-height:24px;text-align:center;">12w</div>
+                </div>
+              </div>
+              <div class="bar-row">
+                <div class="bar-label">BD-孙八</div>
+                <div class="bar-track" style="flex:1;">
+                  <div class="bar-fill-1" style="width:12%;background:#4fc3f7;opacity:0.85;border-radius:5px 0 0 5px;color:#fff;font-size:11px;line-height:24px;text-align:center;">18w</div>
+                  <div class="bar-fill-2" style="left:12%;width:7%;background:#81d4fa;opacity:0.85;border-radius:0 5px 5px 0;color:#333;font-size:11px;line-height:24px;text-align:center;">10w</div>
+                </div>
+              </div>
+              <div class="bar-row">
+                <div class="bar-label">BD-周九</div>
+                <div class="bar-track" style="flex:1;">
+                  <div class="bar-fill-1" style="width:10%;background:#4fc3f7;opacity:0.85;border-radius:5px 0 0 5px;color:#fff;font-size:11px;line-height:24px;text-align:center;">15w</div>
+                  <div class="bar-fill-2" style="left:10%;width:6%;background:#81d4fa;opacity:0.85;border-radius:0 5px 5px 0;color:#333;font-size:11px;line-height:24px;text-align:center;">9w</div>
+                </div>
+              </div>
+              <div class="bar-row">
+                <div class="bar-label">BD-吴十</div>
+                <div class="bar-track" style="flex:1;">
+                  <div class="bar-fill-1" style="width:8%;background:#4fc3f7;opacity:0.85;border-radius:5px 0 0 5px;color:#fff;font-size:11px;line-height:24px;text-align:center;">12w</div>
+                  <div class="bar-fill-2" style="left:8%;width:5%;background:#81d4fa;opacity:0.85;border-radius:0 5px 5px 0;color:#333;font-size:11px;line-height:24px;text-align:center;">8w</div>
+                </div>
+              </div>
+              <div class="bar-row">
+                <div class="bar-label">BD-郑十一</div>
+                <div class="bar-track" style="flex:1;">
+                  <div class="bar-fill-1" style="width:7%;background:#4fc3f7;opacity:0.85;border-radius:5px 0 0 5px;color:#fff;font-size:11px;line-height:24px;text-align:center;">10w</div>
+                  <div class="bar-fill-2" style="left:7%;width:4%;background:#81d4fa;opacity:0.85;border-radius:0 5px 5px 0;color:#333;font-size:11px;line-height:24px;text-align:center;">6w</div>
+                </div>
+              </div>
+              <div class="bar-row">
+                <div class="bar-label">BD-王十二</div>
+                <div class="bar-track" style="flex:1;">
+                  <div class="bar-fill-1" style="width:6%;background:#4fc3f7;opacity:0.85;border-radius:5px 0 0 5px;color:#fff;font-size:11px;line-height:24px;text-align:center;">8w</div>
+                  <div class="bar-fill-2" style="left:6%;width:3%;background:#81d4fa;opacity:0.85;border-radius:0 5px 5px 0;color:#333;font-size:11px;line-height:24px;text-align:center;">5w</div>
+                </div>
+              </div>
+              <div class="bar-row">
+                <div class="bar-label">BD-陈十三</div>
+                <div class="bar-track" style="flex:1;">
+                  <div class="bar-fill-1" style="width:5%;background:#4fc3f7;opacity:0.85;border-radius:5px 0 0 5px;color:#fff;font-size:11px;line-height:24px;text-align:center;">7w</div>
+                  <div class="bar-fill-2" style="left:5%;width:3%;background:#81d4fa;opacity:0.85;border-radius:0 5px 5px 0;color:#333;font-size:11px;line-height:24px;text-align:center;">4w</div>
+                </div>
+              </div>
+              <div class="bar-row">
+                <div class="bar-label">BD-林十四</div>
+                <div class="bar-track" style="flex:1;">
+                  <div class="bar-fill-1" style="width:3.5%;background:#4fc3f7;opacity:0.85;border-radius:5px 0 0 5px;color:#fff;font-size:11px;line-height:24px;text-align:center;">5w</div>
+                  <div class="bar-fill-2" style="left:3.5%;width:2%;background:#81d4fa;opacity:0.85;border-radius:0 5px 5px 0;color:#333;font-size:11px;line-height:24px;text-align:center;">3w</div>
+                </div>
+              </div>
+              <div class="bar-row">
+                <div class="bar-label">BD-黄十五</div>
+                <div class="bar-track" style="flex:1;">
+                  <div class="bar-fill-1" style="width:3%;background:#4fc3f7;opacity:0.85;border-radius:5px 0 0 5px;color:#fff;font-size:11px;line-height:24px;text-align:center;">4w</div>
+                  <div class="bar-fill-2" style="left:3%;width:2%;background:#81d4fa;opacity:0.85;border-radius:0 5px 5px 0;color:#333;font-size:11px;line-height:24px;text-align:center;">2.5w</div>
+                </div>
+              </div>
+              <div class="bar-row">
+                <div class="bar-label">BD-刘十六</div>
+                <div class="bar-track" style="flex:1;">
+                  <div class="bar-fill-1" style="width:2%;background:#4fc3f7;opacity:0.85;border-radius:5px 0 0 5px;color:#fff;font-size:11px;line-height:24px;text-align:center;">3w</div>
+                  <div class="bar-fill-2" style="left:2%;width:1.5%;background:#81d4fa;opacity:0.85;border-radius:0 5px 5px 0;color:#333;font-size:11px;line-height:24px;text-align:center;">2w</div>
+                </div>
+              </div>
+              <div class="bar-row">
+                <div class="bar-label">BD-杨十七</div>
+                <div class="bar-track" style="flex:1;">
+                  <div class="bar-fill-1" style="width:1.5%;background:#4fc3f7;opacity:0.85;border-radius:5px 0 0 5px;color:#fff;font-size:11px;line-height:24px;text-align:center;">2w</div>
+                  <div class="bar-fill-2" style="left:1.5%;width:1%;background:#81d4fa;opacity:0.85;border-radius:0 5px 5px 0;color:#333;font-size:11px;line-height:24px;text-align:center;">1.5w</div>
+                </div>
+              </div>
+            </div>
+            </div>
+            <div class="bar-legend">
+              <span><span class="legend-dot" style="background:#4fc3f7"></span>预测业绩</span>
+              <span><span class="legend-dot" style="background:#81d4fa"></span>已达成预测业绩</span>
+            </div>
+            <div style="font-size:11px;color:#91a2b0;margin-top:4px;">总预测业绩=预测业绩+已达成预测业绩</div>
+          </div>
+          <div style="border:1px solid #e0e4e8;border-radius:8px;padding:12px;overflow:hidden;">
+            <div class="card-subtitle">储备排名</div>
+            <div class="scroll-bar-wrap" style="max-height:500px;">
+            <div class="bar-chart-wire">
+              <div class="bar-row">
+                <div class="bar-label">BD-张三</div>
+                <div class="bar-track" style="flex:1;">
+                  <div class="bar-fill-1" style="width:57.1%;background:#66bb6a;opacity:0.85;border-radius:5px 0 0 5px;color:#fff;font-size:11px;line-height:24px;text-align:center;">200</div>
+                  <div class="bar-fill-2" style="left:57.1%;width:42.9%;background:#a5d6a7;opacity:0.85;border-radius:0 5px 5px 0;color:#333;font-size:11px;line-height:24px;text-align:center;">150</div>
+                </div>
+              </div>
+              <div class="bar-row">
+                <div class="bar-label">BD-李四</div>
+                <div class="bar-track" style="flex:1;">
+                  <div class="bar-fill-1" style="width:43%;background:#66bb6a;opacity:0.85;border-radius:5px 0 0 5px;color:#fff;font-size:11px;line-height:24px;text-align:center;">150</div>
+                  <div class="bar-fill-2" style="left:43%;width:29%;background:#a5d6a7;opacity:0.85;border-radius:0 5px 5px 0;color:#333;font-size:11px;line-height:24px;text-align:center;">100</div>
+                </div>
+              </div>
+              <div class="bar-row">
+                <div class="bar-label">BD-王五</div>
+                <div class="bar-track" style="flex:1;">
+                  <div class="bar-fill-1" style="width:29%;background:#66bb6a;opacity:0.85;border-radius:5px 0 0 5px;color:#fff;font-size:11px;line-height:24px;text-align:center;">100</div>
+                  <div class="bar-fill-2" style="left:29%;width:17%;background:#a5d6a7;opacity:0.85;border-radius:0 5px 5px 0;color:#333;font-size:11px;line-height:24px;text-align:center;">60</div>
+                </div>
+              </div>
+              <div class="bar-row">
+                <div class="bar-label">BD-赵六</div>
+                <div class="bar-track" style="flex:1;">
+                  <div class="bar-fill-1" style="width:17%;background:#66bb6a;opacity:0.85;border-radius:5px 0 0 5px;color:#fff;font-size:11px;line-height:24px;text-align:center;">60</div>
+                  <div class="bar-fill-2" style="left:17%;width:9%;background:#a5d6a7;opacity:0.85;border-radius:0 5px 5px 0;color:#333;font-size:11px;line-height:24px;text-align:center;">30</div>
+                </div>
+              </div>
+              <div class="bar-row">
+                <div class="bar-label">BD-钱七</div>
+                <div class="bar-track" style="flex:1;">
+                  <div class="bar-fill-1" style="width:14%;background:#66bb6a;opacity:0.85;border-radius:5px 0 0 5px;color:#fff;font-size:11px;line-height:24px;text-align:center;">50</div>
+                  <div class="bar-fill-2" style="left:14%;width:9%;background:#a5d6a7;opacity:0.85;border-radius:0 5px 5px 0;color:#333;font-size:11px;line-height:24px;text-align:center;">30</div>
+                </div>
+              </div>
+              <div class="bar-row">
+                <div class="bar-label">BD-孙八</div>
+                <div class="bar-track" style="flex:1;">
+                  <div class="bar-fill-1" style="width:12%;background:#66bb6a;opacity:0.85;border-radius:5px 0 0 5px;color:#fff;font-size:11px;line-height:24px;text-align:center;">42</div>
+                  <div class="bar-fill-2" style="left:12%;width:8%;background:#a5d6a7;opacity:0.85;border-radius:0 5px 5px 0;color:#333;font-size:11px;line-height:24px;text-align:center;">28</div>
+                </div>
+              </div>
+              <div class="bar-row">
+                <div class="bar-label">BD-周九</div>
+                <div class="bar-track" style="flex:1;">
+                  <div class="bar-fill-1" style="width:10%;background:#66bb6a;opacity:0.85;border-radius:5px 0 0 5px;color:#fff;font-size:11px;line-height:24px;text-align:center;">35</div>
+                  <div class="bar-fill-2" style="left:10%;width:7%;background:#a5d6a7;opacity:0.85;border-radius:0 5px 5px 0;color:#333;font-size:11px;line-height:24px;text-align:center;">25</div>
+                </div>
+              </div>
+              <div class="bar-row">
+                <div class="bar-label">BD-吴十</div>
+                <div class="bar-track" style="flex:1;">
+                  <div class="bar-fill-1" style="width:9%;background:#66bb6a;opacity:0.85;border-radius:5px 0 0 5px;color:#fff;font-size:11px;line-height:24px;text-align:center;">30</div>
+                  <div class="bar-fill-2" style="left:9%;width:6%;background:#a5d6a7;opacity:0.85;border-radius:0 5px 5px 0;color:#333;font-size:11px;line-height:24px;text-align:center;">20</div>
+                </div>
+              </div>
+              <div class="bar-row">
+                <div class="bar-label">BD-郑十一</div>
+                <div class="bar-track" style="flex:1;">
+                  <div class="bar-fill-1" style="width:7%;background:#66bb6a;opacity:0.85;border-radius:5px 0 0 5px;color:#fff;font-size:11px;line-height:24px;text-align:center;">24</div>
+                  <div class="bar-fill-2" style="left:7%;width:5%;background:#a5d6a7;opacity:0.85;border-radius:0 5px 5px 0;color:#333;font-size:11px;line-height:24px;text-align:center;">16</div>
+                </div>
+              </div>
+              <div class="bar-row">
+                <div class="bar-label">BD-王十二</div>
+                <div class="bar-track" style="flex:1;">
+                  <div class="bar-fill-1" style="width:5%;background:#66bb6a;opacity:0.85;border-radius:5px 0 0 5px;color:#fff;font-size:11px;line-height:24px;text-align:center;">18</div>
+                  <div class="bar-fill-2" style="left:5%;width:4%;background:#a5d6a7;opacity:0.85;border-radius:0 5px 5px 0;color:#333;font-size:11px;line-height:24px;text-align:center;">12</div>
+                </div>
+              </div>
+              <div class="bar-row">
+                <div class="bar-label">BD-陈十三</div>
+                <div class="bar-track" style="flex:1;">
+                  <div class="bar-fill-1" style="width:4%;background:#66bb6a;opacity:0.85;border-radius:5px 0 0 5px;color:#fff;font-size:11px;line-height:24px;text-align:center;">15</div>
+                  <div class="bar-fill-2" style="left:4%;width:3%;background:#a5d6a7;opacity:0.85;border-radius:0 5px 5px 0;color:#333;font-size:11px;line-height:24px;text-align:center;">10</div>
+                </div>
+              </div>
+              <div class="bar-row">
+                <div class="bar-label">BD-林十四</div>
+                <div class="bar-track" style="flex:1;">
+                  <div class="bar-fill-1" style="width:3.5%;background:#66bb6a;opacity:0.85;border-radius:5px 0 0 5px;color:#fff;font-size:11px;line-height:24px;text-align:center;">12</div>
+                  <div class="bar-fill-2" style="left:3.5%;width:2.5%;background:#a5d6a7;opacity:0.85;border-radius:0 5px 5px 0;color:#333;font-size:11px;line-height:24px;text-align:center;">8</div>
+                </div>
+              </div>
+              <div class="bar-row">
+                <div class="bar-label">BD-黄十五</div>
+                <div class="bar-track" style="flex:1;">
+                  <div class="bar-fill-1" style="width:3%;background:#66bb6a;opacity:0.85;border-radius:5px 0 0 5px;color:#fff;font-size:11px;line-height:24px;text-align:center;">10</div>
+                  <div class="bar-fill-2" style="left:3%;width:2%;background:#a5d6a7;opacity:0.85;border-radius:0 5px 5px 0;color:#333;font-size:11px;line-height:24px;text-align:center;">6</div>
+                </div>
+              </div>
+              <div class="bar-row">
+                <div class="bar-label">BD-刘十六</div>
+                <div class="bar-track" style="flex:1;">
+                  <div class="bar-fill-1" style="width:2%;background:#66bb6a;opacity:0.85;border-radius:5px 0 0 5px;color:#fff;font-size:11px;line-height:24px;text-align:center;">8</div>
+                  <div class="bar-fill-2" style="left:2%;width:1.5%;background:#a5d6a7;opacity:0.85;border-radius:0 5px 5px 0;color:#333;font-size:11px;line-height:24px;text-align:center;">5</div>
+                </div>
+              </div>
+              <div class="bar-row">
+                <div class="bar-label">BD-杨十七</div>
+                <div class="bar-track" style="flex:1;">
+                  <div class="bar-fill-1" style="width:1.5%;background:#66bb6a;opacity:0.85;border-radius:5px 0 0 5px;color:#fff;font-size:11px;line-height:24px;text-align:center;">5</div>
+                  <div class="bar-fill-2" style="left:1.5%;width:1%;background:#a5d6a7;opacity:0.85;border-radius:0 5px 5px 0;color:#333;font-size:11px;line-height:24px;text-align:center;">3</div>
+                </div>
+              </div>
+            </div>
+            </div>
+            <div class="bar-legend">
+              <span><span class="legend-dot" style="background:#66bb6a"></span>储备量</span>
+              <span><span class="legend-dot" style="background:#a5d6a7"></span>已进线量</span>
+            </div>
+            <div style="font-size:11px;color:#91a2b0;margin-top:4px;">总储备量=储备量+已进线量</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">BD 业绩看板</div>
+        <div class="scroll-table-wrap">
+        <table class="wire-table">
+          <thead>
+            <tr>
+              <th>片区</th><th>BD</th><th>预测业绩目标</th>
+              <th>总预测业绩</th><th>总预测业绩达标率</th>
+              <th>已达成预测业绩</th><th>预测业绩</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>粤海片区</td><td>BD-张三</td><td>80w</td><td>145w</td>
+              <td class="progress-cell">81% <div class="mini-progress"><div class="fill" style="width:81%;background:#4fc3f7"></div></div></td>
+              <td>65w</td><td>80w</td>
+            </tr>
+            <tr>
+              <td>粤海片区</td><td>BD-李四</td><td>65w</td><td>105w</td>
+              <td class="progress-cell">69% <div class="mini-progress"><div class="fill" style="width:69%;background:#4fc3f7"></div></div></td>
+              <td>45w</td><td>60w</td>
+            </tr>
+            <tr>
+              <td>浙闽片区</td><td>BD-王五</td><td>45w</td><td>68w</td>
+              <td class="progress-cell">62% <div class="mini-progress"><div class="fill" style="width:62%;background:#4fc3f7"></div></div></td>
+              <td>28w</td><td>40w</td>
+            </tr>
+            <tr>
+              <td>浙闽片区</td><td>BD-赵六</td><td>30w</td><td>40w</td>
+              <td class="progress-cell">50% <div class="mini-progress"><div class="fill" style="width:50%;background:#4fc3f7"></div></div></td>
+              <td>15w</td><td>25w</td>
+            </tr>
+            <tr>
+              <td>苏皖片区</td><td>BD-钱七</td><td>28w</td><td>32w</td>
+              <td class="progress-cell">44% <div class="mini-progress"><div class="fill" style="width:44%;background:#4fc3f7"></div></div></td>
+              <td>12w</td><td>20w</td>
+            </tr>
+            <tr>
+              <td>苏皖片区</td><td>BD-孙八</td><td>25w</td><td>28w</td>
+              <td class="progress-cell">40% <div class="mini-progress"><div class="fill" style="width:40%;background:#4fc3f7"></div></div></td>
+              <td>10w</td><td>18w</td>
+            </tr>
+            <tr>
+              <td>云桂黔片区</td><td>BD-周九</td><td>22w</td><td>24w</td>
+              <td class="progress-cell">41% <div class="mini-progress"><div class="fill" style="width:41%;background:#4fc3f7"></div></div></td>
+              <td>9w</td><td>15w</td>
+            </tr>
+            <tr>
+              <td>云桂黔片区</td><td>BD-吴十</td><td>20w</td><td>20w</td>
+              <td class="progress-cell">40% <div class="mini-progress"><div class="fill" style="width:40%;background:#4fc3f7"></div></div></td>
+              <td>8w</td><td>12w</td>
+            </tr>
+            <tr>
+              <td>湘鄂片区</td><td>BD-郑十一</td><td>18w</td><td>16w</td>
+              <td class="progress-cell">38% <div class="mini-progress"><div class="fill" style="width:38%;background:#4fc3f7"></div></div></td>
+              <td>6w</td><td>10w</td>
+            </tr>
+            <tr>
+              <td>湘鄂片区</td><td>BD-王十二</td><td>15w</td><td>13w</td>
+              <td class="progress-cell">33% <div class="mini-progress"><div class="fill" style="width:33%;background:#4fc3f7"></div></div></td>
+              <td>5w</td><td>8w</td>
+            </tr>
+            <tr>
+              <td>晋蒙片区</td><td>BD-陈十三</td><td>14w</td><td>11w</td>
+              <td class="progress-cell">29% <div class="mini-progress"><div class="fill" style="width:29%;background:#4fc3f7"></div></div></td>
+              <td>4w</td><td>7w</td>
+            </tr>
+            <tr>
+              <td>晋蒙片区</td><td>BD-林十四</td><td>12w</td><td>8w</td>
+              <td class="progress-cell">25% <div class="mini-progress"><div class="fill" style="width:25%;background:#4fc3f7"></div></div></td>
+              <td>3w</td><td>5w</td>
+            </tr>
+            <tr>
+              <td>黑吉辽片区</td><td>BD-黄十五</td><td>10w</td><td>6.5w</td>
+              <td class="progress-cell">25% <div class="mini-progress"><div class="fill" style="width:25%;background:#4fc3f7"></div></div></td>
+              <td>2.5w</td><td>4w</td>
+            </tr>
+            <tr>
+              <td>黑吉辽片区</td><td>BD-刘十六</td><td>8w</td><td>5w</td>
+              <td class="progress-cell">25% <div class="mini-progress"><div class="fill" style="width:25%;background:#4fc3f7"></div></div></td>
+              <td>2w</td><td>3w</td>
+            </tr>
+            <tr>
+              <td>黑吉辽片区</td><td>BD-杨十七</td><td>6w</td><td>3.5w</td>
+              <td class="progress-cell">25% <div class="mini-progress"><div class="fill" style="width:25%;background:#4fc3f7"></div></div></td>
+              <td>1.5w</td><td>2w</td>
+            </tr>
+          </tbody>
+        </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">BD 储备看板</div>
+        <div class="scroll-table-wrap">
+        <table class="wire-table">
+          <thead>
+            <tr>
+              <th>片区</th><th>BD</th><th>总储备量</th>
+              <th>已进线量</th><th>储备量</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>粤海片区</td><td>BD-张三</td><td>350</td><td>150</td><td>200</td></tr>
+            <tr><td>粤海片区</td><td>BD-李四</td><td>250</td><td>100</td><td>150</td></tr>
+            <tr><td>浙闽片区</td><td>BD-王五</td><td>160</td><td>60</td><td>100</td></tr>
+            <tr><td>浙闽片区</td><td>BD-赵六</td><td>90</td><td>30</td><td>60</td></tr>
+            <tr><td>苏皖片区</td><td>BD-钱七</td><td>80</td><td>30</td><td>50</td></tr>
+            <tr><td>苏皖片区</td><td>BD-孙八</td><td>70</td><td>28</td><td>42</td></tr>
+            <tr><td>云桂黔片区</td><td>BD-周九</td><td>60</td><td>25</td><td>35</td></tr>
+            <tr><td>云桂黔片区</td><td>BD-吴十</td><td>50</td><td>20</td><td>30</td></tr>
+            <tr><td>湘鄂片区</td><td>BD-郑十一</td><td>40</td><td>16</td><td>24</td></tr>
+            <tr><td>湘鄂片区</td><td>BD-王十二</td><td>30</td><td>12</td><td>18</td></tr>
+            <tr><td>晋蒙片区</td><td>BD-陈十三</td><td>25</td><td>10</td><td>15</td></tr>
+            <tr><td>晋蒙片区</td><td>BD-林十四</td><td>20</td><td>8</td><td>12</td></tr>
+            <tr><td>黑吉辽片区</td><td>BD-黄十五</td><td>16</td><td>6</td><td>10</td></tr>
+            <tr><td>黑吉辽片区</td><td>BD-刘十六</td><td>13</td><td>5</td><td>8</td></tr>
+            <tr><td>黑吉辽片区</td><td>BD-杨十七</td><td>8</td><td>3</td><td>5</td></tr>
+          </tbody>
+        </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ==================== 两期对比看板 ==================== -->
+<div id="main-compare" style="display:none">
+  <div class="sub-nav" id="sub-compare">
+    <button class="sub-nav-btn active" onclick="switchSub(this, 'compare','A')">总览与课线</button>
+    <button class="sub-nav-btn" onclick="switchSub(this, 'compare','B')">片区</button>
+    <button class="sub-nav-btn" onclick="switchSub(this, 'compare','D')">地区</button>
+    <button class="sub-nav-btn" onclick="switchSub(this, 'compare','C')">BD</button>
+  </div>
+
+  <div class="content">
+
+    <!-- ===== 对比 A: 总览与课线 (2.1 + 2.2) ===== -->
+    <div class="section active" id="compare-A">
+      <div class="section-header">
+        <h2>总储备看板</h2>
+        <span class="badge">两期对比</span>
+      </div>
+
+      <div class="toggle-group">
+        <button class="toggle-btn active" onclick="toggleMode(this)">保底</button>
+        <button class="toggle-btn" onclick="toggleMode(this)">冲高</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">业绩板块</div>
+        <div class="metric-row col-3">
+          <div class="metric-card compare-card">
+            <div class="period-label">本期 总预测业绩</div>
+            <div class="period-value">120<span class="unit">w</span></div>
+            <div class="delta up">较上期 +15w</div>
+            <div class="period-label" style="margin-top:10px">上期: 105w</div>
+          </div>
+          <div class="metric-card compare-card">
+            <div class="period-label">本期 预测业绩</div>
+            <div class="period-value">80<span class="unit">w</span></div>
+            <div class="delta up">较上期 +8w</div>
+            <div class="period-label" style="margin-top:10px">上期: 72w</div>
+          </div>
+          <div class="metric-card compare-card">
+            <div class="period-label">本期 已达成预测业绩</div>
+            <div class="period-value">45<span class="unit">w</span></div>
+            <div class="delta down">较上期 -3w</div>
+            <div class="period-label" style="margin-top:10px">上期: 48w</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">储备板块</div>
+        <div class="metric-row col-3">
+          <div class="metric-card compare-card">
+            <div class="period-label">本期 总储备量</div>
+            <div class="period-value">2,400</div>
+            <div class="delta up">较上期 +300</div>
+            <div class="period-label" style="margin-top:10px">上期: 2,100</div>
+          </div>
+          <div class="metric-card compare-card">
+            <div class="period-label">本期 储备量</div>
+            <div class="period-value">1,600</div>
+            <div class="delta up">较上期 +200</div>
+            <div class="period-label" style="margin-top:10px">上期: 1,400</div>
+          </div>
+          <div class="metric-card compare-card">
+            <div class="period-label">本期 已进线量</div>
+            <div class="period-value">800</div>
+            <div class="delta up">较上期 +100</div>
+            <div class="period-label" style="margin-top:10px">上期: 700</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-divider"></div>
+
+      <!-- 2.2 课线项目对比 -->
+      <div class="section-header">
+        <h2>课线项目看板</h2>
+        <span class="badge">课线对比</span>
+      </div>
+
+      <div class="toggle-group">
+        <button class="toggle-btn active" onclick="toggleMode(this)">保底</button>
+        <button class="toggle-btn" onclick="toggleMode(this)">冲高</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">班期总看板</div>
+        <div style="overflow-x:auto;">
+          <table class="compare-table">
+            <thead>
+              <tr>
+                <th rowspan="2">班期</th>
+                <th colspan="2" style="background:#e3f2fd;">本期</th>
+                <th colspan="2" style="background:#fff3e0;">上期</th>
+                <th colspan="2" style="background:#fce4ec;">两期变化情况</th>
+              </tr>
+              <tr>
+                <th>总储备量</th><th>总预测业绩</th>
+                <th>总储备量</th><th>总预测业绩</th>
+                <th>总储备量变化</th><th>总预测业绩变化</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>2026-06-10</td>
+                <td>2260</td><td>490.2w</td>
+                <td>1902</td><td>438.8w</td>
+                <td class="change-up-bg">+358</td><td class="change-up-bg">+51.4w</td>
+              </tr>
+              <tr>
+                <td>2026-06-11</td>
+                <td>2330</td><td>508.7w</td>
+                <td>2033</td><td>461.0w</td>
+                <td class="change-up-bg">+297</td><td class="change-up-bg">+47.7w</td>
+              </tr>
+              <tr>
+                <td>2026-06-12</td>
+                <td>2401</td><td>525.1w</td>
+                <td>2146</td><td>479.4w</td>
+                <td class="change-up-bg">+255</td><td class="change-up-bg">+45.7w</td>
+              </tr>
+              <tr>
+                <td>2026-06-13</td>
+                <td>2468</td><td>541.3w</td>
+                <td>2257</td><td>497.7w</td>
+                <td class="change-up-bg">+211</td><td class="change-up-bg">+43.6w</td>
+              </tr>
+              <tr style="font-weight:600;background:#f8f9fb;">
+                <td>总计</td>
+                <td>2468</td><td>541.3w</td>
+                <td>2257</td><td>497.7w</td>
+                <td class="change-up-bg">+211</td><td class="change-up-bg">+43.6w</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">AI无盒-课线班期看板</div>
+        <div style="overflow-x:auto;">
+          <table class="compare-table">
+            <thead>
+              <tr>
+                <th rowspan="2">课线项目</th>
+                <th rowspan="2">班期</th>
+                <th rowspan="2">招生进度</th>
+                <th colspan="2" style="background:#e3f2fd;">本期</th>
+                <th colspan="2" style="background:#fff3e0;">上期</th>
+                <th colspan="2" style="background:#fce4ec;">两期变化情况</th>
+              </tr>
+              <tr>
+                <th>总储备量</th><th>总预测业绩</th>
+                <th>总储备量</th><th>总预测业绩</th>
+                <th>总储备量变化</th><th>总预测业绩变化</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>AI-无盒</td><td>2026-06-10</td><td>已结束</td>
+                <td>960</td><td>205.0w</td>
+                <td>780</td><td>176.5w</td>
+                <td class="change-up-bg">+180</td><td class="change-up-bg">+28.5w</td>
+              </tr>
+              <tr>
+                <td>AI-无盒</td><td>2026-06-11</td><td>招生中</td>
+                <td>980</td><td>210.1w</td>
+                <td>802</td><td>182.8w</td>
+                <td class="change-up-bg">+178</td><td class="change-up-bg">+27.3w</td>
+              </tr>
+              <tr>
+                <td>AI-无盒</td><td>2026-06-12</td><td>招生中</td>
+                <td>1002</td><td>216.8w</td>
+                <td>826</td><td>189.2w</td>
+                <td class="change-up-bg">+176</td><td class="change-up-bg">+27.6w</td>
+              </tr>
+              <tr>
+                <td>AI-无盒</td><td>2026-06-13</td><td>未启动</td>
+                <td>1030</td><td>223.0w</td>
+                <td>858</td><td>195.3w</td>
+                <td class="change-up-bg">+172</td><td class="change-up-bg">+27.7w</td>
+              </tr>
+              <tr style="font-weight:600;background:#f8f9fb;">
+                <td>总计</td><td>—</td><td>—</td>
+                <td>1030</td><td>223.0w</td>
+                <td>858</td><td>195.3w</td>
+                <td class="change-up-bg">+172</td><td class="change-up-bg">+27.7w</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">机器人-课线班期看板</div>
+        <div style="overflow-x:auto;">
+          <table class="compare-table">
+            <thead>
+              <tr>
+                <th rowspan="2">课线项目</th>
+                <th rowspan="2">班期</th>
+                <th rowspan="2">招生进度</th>
+                <th colspan="2" style="background:#e3f2fd;">本期</th>
+                <th colspan="2" style="background:#fff3e0;">上期</th>
+                <th colspan="2" style="background:#fce4ec;">两期变化情况</th>
+              </tr>
+              <tr>
+                <th>总储备量</th><th>总预测业绩</th>
+                <th>总储备量</th><th>总预测业绩</th>
+                <th>总储备量变化</th><th>总预测业绩变化</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>机器人</td><td>2026-06-10</td><td>已结束</td>
+                <td>840</td><td>180.2w</td>
+                <td>720</td><td>162.3w</td>
+                <td class="change-up-bg">+120</td><td class="change-up-bg">+17.9w</td>
+              </tr>
+              <tr>
+                <td>机器人</td><td>2026-06-11</td><td>招生中</td>
+                <td>860</td><td>185.1w</td>
+                <td>740</td><td>167.8w</td>
+                <td class="change-up-bg">+120</td><td class="change-up-bg">+17.3w</td>
+              </tr>
+              <tr>
+                <td>机器人</td><td>2026-06-12</td><td>招生中</td>
+                <td>882</td><td>190.9w</td>
+                <td>762</td><td>173.0w</td>
+                <td class="change-up-bg">+120</td><td class="change-up-bg">+17.9w</td>
+              </tr>
+              <tr>
+                <td>机器人</td><td>2026-06-13</td><td>未启动</td>
+                <td>905</td><td>196.5w</td>
+                <td>785</td><td>178.3w</td>
+                <td class="change-up-bg">+120</td><td class="change-up-bg">+18.2w</td>
+              </tr>
+              <tr style="font-weight:600;background:#f8f9fb;">
+                <td>总计</td><td>—</td><td>—</td>
+                <td>905</td><td>196.5w</td>
+                <td>785</td><td>178.3w</td>
+                <td class="change-up-bg">+120</td><td class="change-up-bg">+18.2w</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">科学有盒-课线班期看板</div>
+        <div style="overflow-x:auto;">
+          <table class="compare-table">
+            <thead>
+              <tr>
+                <th rowspan="2">课线项目</th>
+                <th rowspan="2">班期</th>
+                <th rowspan="2">招生进度</th>
+                <th colspan="2" style="background:#e3f2fd;">本期</th>
+                <th colspan="2" style="background:#fff3e0;">上期</th>
+                <th colspan="2" style="background:#fce4ec;">两期变化情况</th>
+              </tr>
+              <tr>
+                <th>总储备量</th><th>总预测业绩</th>
+                <th>总储备量</th><th>总预测业绩</th>
+                <th>总储备量变化</th><th>总预测业绩变化</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>科学-有盒</td><td>2026-06-10</td><td>已结束</td>
+                <td>460</td><td>100.2w</td>
+                <td>402</td><td>97.0w</td>
+                <td class="change-up-bg">+58</td><td class="change-up-bg">+3.2w</td>
+              </tr>
+              <tr>
+                <td>科学-有盒</td><td>2026-06-11</td><td>已结束</td>
+                <td>490</td><td>108.5w</td>
+                <td>488</td><td>108.2w</td>
+                <td class="change-up-bg">+2</td><td class="change-up-bg">+0.3w</td>
+              </tr>
+              <tr>
+                <td>科学-有盒</td><td>2026-06-12</td><td>招生中</td>
+                <td>517</td><td>117.4w</td>
+                <td>556</td><td>113.2w</td>
+                <td class="change-down-bg">-39</td><td class="change-up-bg">+4.2w</td>
+              </tr>
+              <tr>
+                <td>科学-有盒</td><td>2026-06-13</td><td>未启动</td>
+                <td>533</td><td>121.8w</td>
+                <td>594</td><td>119.9w</td>
+                <td class="change-down-bg">-61</td><td class="change-up-bg">+1.9w</td>
+              </tr>
+              <tr style="font-weight:600;background:#f8f9fb;">
+                <td>总计</td><td>—</td><td>—</td>
+                <td>533</td><td>121.8w</td>
+                <td>594</td><td>119.9w</td>
+                <td class="change-down-bg">-61</td><td class="change-up-bg">+1.9w</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <!-- 2.2.5 课线项目占比 -->
+      <div class="card">
+        <div class="card-title">课线项目占比</div>
+        <style>.st-bar{display:flex;flex-direction:column;border-radius:5px;overflow:hidden;}.st-seg{display:flex;flex-direction:column;justify-content:center;align-items:center;line-height:1.2;text-align:center;}.st-seg .st-val{font-size:12px;font-weight:600;color:#fff;}.st-seg .st-pct{font-size:10px;color:rgba(255,255,255,.85);}.st-labels{display:flex;justify-content:center;gap:8px;margin-top:8px;}.st-labels span{font-size:11px;color:#444;width:48px;text-align:center;border:1px solid #d0d5dd;border-radius:4px;padding:3px 0;background:#f7f8fa;font-weight:500;}.st-metric-name{font-size:13px;color:#1a1a2e;font-weight:700;margin-top:8px;text-align:center;}</style>
+
+        <div style="display:flex;gap:32px;">
+          <!-- ======== 储备板块 ======== -->
+          <div style="flex:1;border:1px solid #dbeafe;border-radius:8px;padding:16px;">
+            <div style="border-left:3px solid #4FC3F7;padding-left:10px;font-size:15px;font-weight:600;color:#1a1a2e;margin-bottom:18px;">储备板块</div>
+            <div style="display:flex;gap:24px;justify-content:space-between;">
+
+              <!-- 总储备量 -->
+              <div style="min-width:90px;">
+                <div style="display:flex;gap:10px;justify-content:center;">
+                  <div>
+                    <div class="st-bar" style="width:44px;height:150px;">
+                      <div class="st-seg seg-ai" style="height:40%;"><span class="st-val">960</span><span class="st-pct">40%</span></div>
+                      <div class="st-seg seg-robot" style="height:35%;"><span class="st-val">840</span><span class="st-pct">35%</span></div>
+                      <div class="st-seg seg-science" style="height:25%;"><span class="st-val">600</span><span class="st-pct">25%</span></div>
+                    </div>
+                    <div class="st-labels"><span>本期</span></div>
+                  </div>
+                  <div>
+                    <div class="st-bar" style="width:44px;height:150px;">
+                      <div class="st-seg seg-ai" style="height:37%;"><span class="st-val">780</span><span class="st-pct">37%</span></div>
+                      <div class="st-seg seg-robot" style="height:40%;"><span class="st-val">840</span><span class="st-pct">40%</span></div>
+                      <div class="st-seg seg-science" style="height:25%;"><span class="st-val">480</span><span class="st-pct">25%</span></div>
+                    </div>
+                    <div class="st-labels"><span>上期</span></div>
+                  </div>
+                </div>
+                <div class="st-metric-name">总储备量</div>
+              </div>
+
+              <!-- 储备量 -->
+              <div style="min-width:90px;">
+                <div style="display:flex;gap:10px;justify-content:center;">
+                  <div>
+                    <div class="st-bar" style="width:44px;height:150px;">
+                      <div class="st-seg seg-ai" style="height:40%;"><span class="st-val">640</span><span class="st-pct">40%</span></div>
+                      <div class="st-seg seg-robot" style="height:35%;"><span class="st-val">560</span><span class="st-pct">35%</span></div>
+                      <div class="st-seg seg-science" style="height:25%;"><span class="st-val">400</span><span class="st-pct">25%</span></div>
+                    </div>
+                    <div class="st-labels"><span>本期</span></div>
+                  </div>
+                  <div>
+                    <div class="st-bar" style="width:44px;height:150px;">
+                      <div class="st-seg seg-ai" style="height:37%;"><span class="st-val">520</span><span class="st-pct">37%</span></div>
+                      <div class="st-seg seg-robot" style="height:40%;"><span class="st-val">560</span><span class="st-pct">40%</span></div>
+                      <div class="st-seg seg-science" style="height:25%;"><span class="st-val">320</span><span class="st-pct">25%</span></div>
+                    </div>
+                    <div class="st-labels"><span>上期</span></div>
+                  </div>
+                </div>
+                <div class="st-metric-name">储备量</div>
+              </div>
+
+              <!-- 已进线量 -->
+              <div style="min-width:90px;">
+                <div style="display:flex;gap:10px;justify-content:center;">
+                  <div>
+                    <div class="st-bar" style="width:44px;height:150px;">
+                      <div class="st-seg seg-ai" style="height:40%;"><span class="st-val">320</span><span class="st-pct">40%</span></div>
+                      <div class="st-seg seg-robot" style="height:35%;"><span class="st-val">280</span><span class="st-pct">35%</span></div>
+                      <div class="st-seg seg-science" style="height:25%;"><span class="st-val">200</span><span class="st-pct">25%</span></div>
+                    </div>
+                    <div class="st-labels"><span>本期</span></div>
+                  </div>
+                  <div>
+                    <div class="st-bar" style="width:44px;height:150px;">
+                      <div class="st-seg seg-ai" style="height:37%;"><span class="st-val">260</span><span class="st-pct">37%</span></div>
+                      <div class="st-seg seg-robot" style="height:40%;"><span class="st-val">280</span><span class="st-pct">40%</span></div>
+                      <div class="st-seg seg-science" style="height:25%;"><span class="st-val">160</span><span class="st-pct">25%</span></div>
+                    </div>
+                    <div class="st-labels"><span>上期</span></div>
+                  </div>
+                </div>
+                <div class="st-metric-name">已进线量</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ======== 业绩板块 ======== -->
+          <div style="flex:1;border:1px solid #ffedd5;border-radius:8px;padding:16px;">
+            <div style="border-left:3px solid #FFB74D;padding-left:10px;font-size:15px;font-weight:600;color:#1a1a2e;margin-bottom:18px;">业绩板块</div>
+            <div style="display:flex;gap:24px;justify-content:space-between;">
+
+              <!-- 总预测业绩 -->
+              <div style="min-width:90px;">
+                <div style="display:flex;gap:10px;justify-content:center;">
+                  <div>
+                    <div class="st-bar" style="width:44px;height:150px;">
+                      <div class="st-seg seg-ai" style="height:40%;"><span class="st-val">40w</span><span class="st-pct">40%</span></div>
+                      <div class="st-seg seg-robot" style="height:35%;"><span class="st-val">35w</span><span class="st-pct">35%</span></div>
+                      <div class="st-seg seg-science" style="height:25%;"><span class="st-val">25w</span><span class="st-pct">25%</span></div>
+                    </div>
+                    <div class="st-labels"><span>本期</span></div>
+                  </div>
+                  <div>
+                    <div class="st-bar" style="width:44px;height:150px;">
+                      <div class="st-seg seg-ai" style="height:37%;"><span class="st-val">31.5w</span><span class="st-pct">37%</span></div>
+                      <div class="st-seg seg-robot" style="height:40%;"><span class="st-val">34w</span><span class="st-pct">40%</span></div>
+                      <div class="st-seg seg-science" style="height:25%;"><span class="st-val">19.5w</span><span class="st-pct">25%</span></div>
+                    </div>
+                    <div class="st-labels"><span>上期</span></div>
+                  </div>
+                </div>
+                <div class="st-metric-name">总预测业绩</div>
+              </div>
+
+              <!-- 预测业绩 -->
+              <div style="min-width:90px;">
+                <div style="display:flex;gap:10px;justify-content:center;">
+                  <div>
+                    <div class="st-bar" style="width:44px;height:150px;">
+                      <div class="st-seg seg-ai" style="height:40%;"><span class="st-val">28w</span><span class="st-pct">40%</span></div>
+                      <div class="st-seg seg-robot" style="height:35%;"><span class="st-val">25w</span><span class="st-pct">35%</span></div>
+                      <div class="st-seg seg-science" style="height:25%;"><span class="st-val">17w</span><span class="st-pct">25%</span></div>
+                    </div>
+                    <div class="st-labels"><span>本期</span></div>
+                  </div>
+                  <div>
+                    <div class="st-bar" style="width:44px;height:150px;">
+                      <div class="st-seg seg-ai" style="height:37%;"><span class="st-val">22w</span><span class="st-pct">37%</span></div>
+                      <div class="st-seg seg-robot" style="height:40%;"><span class="st-val">24w</span><span class="st-pct">40%</span></div>
+                      <div class="st-seg seg-science" style="height:25%;"><span class="st-val">14w</span><span class="st-pct">25%</span></div>
+                    </div>
+                    <div class="st-labels"><span>上期</span></div>
+                  </div>
+                </div>
+                <div class="st-metric-name">预测业绩</div>
+              </div>
+
+              <!-- 已达成预测业绩 -->
+              <div style="min-width:90px;">
+                <div style="display:flex;gap:10px;justify-content:center;">
+                  <div>
+                    <div class="st-bar" style="width:44px;height:150px;">
+                      <div class="st-seg seg-ai" style="height:40%;"><span class="st-val">12w</span><span class="st-pct">40%</span></div>
+                      <div class="st-seg seg-robot" style="height:35%;"><span class="st-val">11w</span><span class="st-pct">35%</span></div>
+                      <div class="st-seg seg-science" style="height:25%;"><span class="st-val">7w</span><span class="st-pct">25%</span></div>
+                    </div>
+                    <div class="st-labels"><span>本期</span></div>
+                  </div>
+                  <div>
+                    <div class="st-bar" style="width:44px;height:150px;">
+                      <div class="st-seg seg-ai" style="height:38%;"><span class="st-val">9.5w</span><span class="st-pct">38%</span></div>
+                      <div class="st-seg seg-robot" style="height:40%;"><span class="st-val">10w</span><span class="st-pct">40%</span></div>
+                      <div class="st-seg seg-science" style="height:22%;"><span class="st-val">5.5w</span><span class="st-pct">22%</span></div>
+                    </div>
+                    <div class="st-labels"><span>上期</span></div>
+                  </div>
+                </div>
+                <div class="st-metric-name">已达成预测业绩</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 底部图例 -->
+        <div style="margin-top:20px;padding-top:14px;border-top:1px solid #eef1f5;display:flex;gap:24px;justify-content:center;">
+          <span style="font-size:12px;color:#666;"><span style="display:inline-block;width:13px;height:13px;border-radius:3px;background:linear-gradient(180deg,#81D4FA,#4FC3F7);margin-right:6px;vertical-align:-2px;"></span>AI-无盒</span>
+          <span style="font-size:12px;color:#666;"><span style="display:inline-block;width:13px;height:13px;border-radius:3px;background:linear-gradient(180deg,#FFCC80,#FFB74D);margin-right:6px;vertical-align:-2px;"></span>机器人</span>
+          <span style="font-size:12px;color:#666;"><span style="display:inline-block;width:13px;height:13px;border-radius:3px;background:linear-gradient(180deg,#A5D6A7,#81C784);margin-right:6px;vertical-align:-2px;"></span>科学-有盒</span>
+        </div>
+      </div>
+    </div>
+    <div class="section" id="compare-B">
+      <!-- 2.3 片区 -->
+      <div class="section-header">
+        <h2>片区看板</h2>
+        <span class="badge">片区对比</span>
+      </div>
+
+      <div class="toggle-group" style="margin-bottom:14px;">
+        <button class="toggle-btn active" onclick="toggleMode(this, 'compare-B-guarantee', 'compare-B-aggressive')">保底</button>
+        <button class="toggle-btn" onclick="toggleMode(this, 'compare-B-aggressive', 'compare-B-guarantee')">冲高</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">片区-总目标储备变化看板</div>
+        <div style="overflow-x:auto;">
+          <table class="compare-table">
+            <thead>
+              <tr>
+                <th rowspan="2">片区</th><th rowspan="2">预测业绩目标</th>
+                <th colspan="3" style="background:#e3f2fd;">本期</th>
+                <th colspan="3" style="background:#fff3e0;">上期</th>
+                <th colspan="3" style="background:#fce4ec;">两期变化情况</th>
+              </tr>
+              <tr>
+                <th>总储备量</th><th>总预测业绩</th><th>总预测业绩达标率</th>
+                <th>总储备量</th><th>总预测业绩</th><th>总预测业绩达标率</th>
+                <th>总储备量变化</th><th>总预测业绩变化</th><th>总预测业绩达标率变化</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="total-row" style="background:#f5f7fa;font-weight:600;">
+                <td><strong>全国</strong></td><td>600w</td>
+                <td>1,500</td><td>390w</td><td>65%</td>
+                <td>1,380</td><td>355w</td><td>59%</td>
+                <td class="change-up-bg">+120</td><td class="change-up-bg">+35w</td><td class="change-up-bg">+6%</td>
+              </tr>
+              <tr>
+                <td>粤海片区</td><td>200w</td>
+                <td>500</td><td>120w</td><td>60%</td>
+                <td>420</td><td>105w</td><td>53%</td>
+                <td class="change-up-bg">+80</td><td class="change-up-bg">+15w</td><td class="change-up-bg">+7%</td>
+              </tr>
+              <tr>
+                <td>浙闽片区</td><td>150w</td>
+                <td>380</td><td>95w</td><td>63%</td>
+                <td>400</td><td>100w</td><td>67%</td>
+                <td class="change-down-bg">-20</td><td class="change-down-bg">-5w</td><td class="change-down-bg">-4%</td>
+              </tr>
+              <tr>
+                <td>云桂黔片区</td><td>120w</td>
+                <td>320</td><td>78w</td><td>65%</td>
+                <td>295</td><td>72w</td><td>60%</td>
+                <td class="change-up-bg">+25</td><td class="change-up-bg">+6w</td><td class="change-up-bg">+5%</td>
+              </tr>
+              <tr>
+                <td>华中片区</td><td>100w</td>
+                <td>260</td><td>62w</td><td>62%</td>
+                <td>240</td><td>58w</td><td>58%</td>
+                <td class="change-up-bg">+20</td><td class="change-up-bg">+4w</td><td class="change-up-bg">+4%</td>
+              </tr>
+              <tr>
+                <td>陕甘宁青片区</td><td>30w</td>
+                <td>80</td><td>18w</td><td>60%</td>
+                <td>65</td><td>15w</td><td>50%</td>
+                <td class="change-up-bg">+15</td><td class="change-up-bg">+3w</td><td class="change-up-bg">+10%</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="section-divider"></div>
+
+      <!-- 片区-储备变化看板 -->
+      <div class="card">
+        <div class="card-title">片区-储备变化看板</div>
+        <div style="overflow-x:auto;">
+          <table class="compare-table">
+            <thead>
+              <tr>
+                <th rowspan="2">片区</th>
+                <th colspan="3" style="background:#e3f2fd;">本期</th>
+                <th colspan="3" style="background:#fff3e0;">上期</th>
+                <th colspan="3" style="background:#fce4ec;">两期变化情况</th>
+              </tr>
+              <tr>
+                <th>总储备量</th><th>已进线量</th><th>储备量</th>
+                <th>总储备量</th><th>已进线量</th><th>储备量</th>
+                <th>总储备量变化</th><th>已进线量变化</th><th>储备量变化</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="total-row" style="background:#f5f7fa;font-weight:600;">
+                <td><strong>全国</strong></td>
+                <td>1,500</td><td>600</td><td>900</td>
+                <td>1,380</td><td>540</td><td>840</td>
+                <td class="change-up-bg">+120</td><td class="change-up-bg">+60</td><td class="change-up-bg">+60</td>
+              </tr>
+              <tr>
+                <td>粤海片区</td>
+                <td>500</td><td>200</td><td>300</td>
+                <td>420</td><td>170</td><td>250</td>
+                <td class="change-up-bg">+80</td><td class="change-up-bg">+30</td><td class="change-up-bg">+50</td>
+              </tr>
+              <tr>
+                <td>浙闽片区</td>
+                <td>380</td><td>150</td><td>230</td>
+                <td>400</td><td>160</td><td>240</td>
+                <td class="change-down-bg">-20</td><td class="change-down-bg">-10</td><td class="change-down-bg">-10</td>
+              </tr>
+              <tr>
+                <td>云桂黔片区</td>
+                <td>320</td><td>130</td><td>190</td>
+                <td>295</td><td>115</td><td>180</td>
+                <td class="change-up-bg">+25</td><td class="change-up-bg">+15</td><td class="change-up-bg">+10</td>
+              </tr>
+              <tr>
+                <td>华中片区</td>
+                <td>260</td><td>100</td><td>160</td>
+                <td>240</td><td>90</td><td>150</td>
+                <td class="change-up-bg">+20</td><td class="change-up-bg">+10</td><td class="change-up-bg">+10</td>
+              </tr>
+              <tr>
+                <td>陕甘宁青片区</td>
+                <td>80</td><td>30</td><td>50</td>
+                <td>65</td><td>25</td><td>40</td>
+                <td class="change-up-bg">+15</td><td class="change-up-bg">+5</td><td class="change-up-bg">+10</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 对比 D: 地区（省份 + 城市）(2.4 + 2.5) ===== -->
+    <div class="section" id="compare-D">
+      <!-- 2.4 省份 -->
+      <div class="section-header">
+        <h2>省份看板</h2>
+        <span class="badge">省份对比</span>
+      </div>
+
+      <div class="toggle-group">
+        <button class="toggle-btn active" onclick="toggleMode(this)">保底</button>
+        <button class="toggle-btn" onclick="toggleMode(this)">冲高</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">省份-总目标储备变化看板</div>
+        <div style="overflow-x:auto;">
+          <table class="compare-table">
+            <thead>
+              <tr>
+                <th rowspan="2">片区</th><th rowspan="2">省份</th><th rowspan="2">预测业绩目标</th>
+                <th colspan="3" style="background:#e3f2fd;">本期</th>
+                <th colspan="3" style="background:#fff3e0;">上期</th>
+                <th colspan="3" style="background:#fce4ec;">两期变化情况</th>
+              </tr>
+              <tr>
+                <th>总储备量</th><th>总预测业绩</th><th>总预测业绩达标率</th>
+                <th>总储备量</th><th>总预测业绩</th><th>总预测业绩达标率</th>
+                <th>总储备量变化</th><th>总预测业绩变化</th><th>总预测业绩达标率变化</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="total-row" style="background:#f5f7fa;font-weight:600;">
+                <td><strong>全国</strong></td><td>-</td><td>600w</td>
+                <td>1,500</td><td>390w</td><td>65%</td>
+                <td>1,380</td><td>355w</td><td>59%</td>
+                <td class="change-up-bg">+120</td><td class="change-up-bg">+35w</td><td class="change-up-bg">+6%</td>
+              </tr>
+              <tr>
+                <td>粤海片区</td><td>广东省</td><td>200w</td>
+                <td>500</td><td>120w</td><td>60%</td>
+                <td>420</td><td>105w</td><td>53%</td>
+                <td class="change-up-bg">+80</td><td class="change-up-bg">+15w</td><td class="change-up-bg">+7%</td>
+              </tr>
+              <tr>
+                <td>粤海片区</td><td>福建省</td><td>100w</td>
+                <td>180</td><td>45w</td><td>45%</td>
+                <td>170</td><td>42w</td><td>42%</td>
+                <td class="change-up-bg">+10</td><td class="change-up-bg">+3w</td><td class="change-up-bg">+3%</td>
+              </tr>
+              <tr>
+                <td>浙闽片区</td><td>浙江省</td><td>100w</td>
+                <td>250</td><td>63w</td><td>63%</td>
+                <td>270</td><td>68w</td><td>68%</td>
+                <td class="change-down-bg">-20</td><td class="change-down-bg">-5w</td><td class="change-down-bg">-5%</td>
+              </tr>
+              <tr>
+                <td>云桂黔片区</td><td>广西</td><td>80w</td>
+                <td>180</td><td>45w</td><td>56%</td>
+                <td>200</td><td>50w</td><td>63%</td>
+                <td class="change-down-bg">-20</td><td class="change-down-bg">-5w</td><td class="change-down-bg">-7%</td>
+              </tr>
+              <tr>
+                <td>云桂黔片区</td><td>云南</td><td>60w</td>
+                <td>150</td><td>38w</td><td>63%</td>
+                <td>140</td><td>35w</td><td>58%</td>
+                <td class="change-up-bg">+10</td><td class="change-up-bg">+3w</td><td class="change-up-bg">+5%</td>
+              </tr>
+              <tr>
+                <td>华中片区</td><td>湖北</td><td>60w</td>
+                <td>160</td><td>38w</td><td>63%</td>
+                <td>150</td><td>36w</td><td>60%</td>
+                <td class="change-up-bg">+10</td><td class="change-up-bg">+2w</td><td class="change-up-bg">+3%</td>
+              </tr>
+              <tr>
+                <td>陕甘宁青片区</td><td>陕西</td><td>20w</td>
+                <td>55</td><td>12w</td><td>60%</td>
+                <td>45</td><td>10w</td><td>50%</td>
+                <td class="change-up-bg">+10</td><td class="change-up-bg">+2w</td><td class="change-up-bg">+10%</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="section-divider"></div>
+
+      <!-- 省份-储备变化看板 -->
+      <div class="card">
+        <div class="card-title">省份-储备变化看板</div>
+        <div style="overflow-x:auto;">
+          <table class="compare-table">
+            <thead>
+              <tr>
+                <th rowspan="2">片区</th><th rowspan="2">省份</th>
+                <th colspan="3" style="background:#e3f2fd;">本期</th>
+                <th colspan="3" style="background:#fff3e0;">上期</th>
+                <th colspan="3" style="background:#fce4ec;">两期变化情况</th>
+              </tr>
+              <tr>
+                <th>总储备量</th><th>已进线量</th><th>储备量</th>
+                <th>总储备量</th><th>已进线量</th><th>储备量</th>
+                <th>总储备量变化</th><th>已进线量变化</th><th>储备量变化</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="total-row" style="background:#f5f7fa;font-weight:600;">
+                <td><strong>全国</strong></td><td>-</td>
+                <td>1,500</td><td>600</td><td>900</td>
+                <td>1,380</td><td>540</td><td>840</td>
+                <td class="change-up-bg">+120</td><td class="change-up-bg">+60</td><td class="change-up-bg">+60</td>
+              </tr>
+              <tr>
+                <td>粤海片区</td><td>广东省</td>
+                <td>500</td><td>200</td><td>300</td>
+                <td>420</td><td>170</td><td>250</td>
+                <td class="change-up-bg">+80</td><td class="change-up-bg">+30</td><td class="change-up-bg">+50</td>
+              </tr>
+              <tr>
+                <td>粤海片区</td><td>福建省</td>
+                <td>180</td><td>70</td><td>110</td>
+                <td>170</td><td>65</td><td>105</td>
+                <td class="change-up-bg">+10</td><td class="change-up-bg">+5</td><td class="change-up-bg">+5</td>
+              </tr>
+              <tr>
+                <td>浙闽片区</td><td>浙江省</td>
+                <td>250</td><td>100</td><td>150</td>
+                <td>270</td><td>105</td><td>165</td>
+                <td class="change-down-bg">-20</td><td class="change-down-bg">-5</td><td class="change-down-bg">-15</td>
+              </tr>
+              <tr>
+                <td>云桂黔片区</td><td>广西</td>
+                <td>180</td><td>70</td><td>110</td>
+                <td>200</td><td>80</td><td>120</td>
+                <td class="change-down-bg">-20</td><td class="change-down-bg">-10</td><td class="change-down-bg">-10</td>
+              </tr>
+              <tr>
+                <td>云桂黔片区</td><td>云南</td>
+                <td>150</td><td>60</td><td>90</td>
+                <td>140</td><td>55</td><td>85</td>
+                <td class="change-up-bg">+10</td><td class="change-up-bg">+5</td><td class="change-up-bg">+5</td>
+              </tr>
+              <tr>
+                <td>华中片区</td><td>湖北</td>
+                <td>160</td><td>65</td><td>95</td>
+                <td>150</td><td>60</td><td>90</td>
+                <td class="change-up-bg">+10</td><td class="change-up-bg">+5</td><td class="change-up-bg">+5</td>
+              </tr>
+              <tr>
+                <td>陕甘宁青片区</td><td>陕西</td>
+                <td>55</td><td>20</td><td>35</td>
+                <td>45</td><td>15</td><td>30</td>
+                <td class="change-up-bg">+10</td><td class="change-up-bg">+5</td><td class="change-up-bg">+5</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="section-divider"></div>
+
+      <!-- 2.5 城市 -->
+      <div class="section-header">
+        <h2>城市看板</h2>
+        <span class="badge">城市对比</span>
+      </div>
+
+      <div class="toggle-group">
+        <button class="toggle-btn active" onclick="toggleMode(this)">保底</button>
+        <button class="toggle-btn" onclick="toggleMode(this)">冲高</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">城市-总储备看板</div>
+        <div class="scroll-table-wrap" style="overflow-x:auto;">
+          <table class="compare-table" id="tbl-city-compare">
+            <thead>
+              <tr>
+                <th>片区</th><th>省份</th><th>城市</th>
+                <th colspan="2" style="background:#e3f2fd;">本期</th>
+                <th colspan="2" style="background:#fff3e0;">上期</th>
+                <th colspan="2" style="background:#fce4ec;">两期变化</th>
+              </tr>
+              <tr>
+                <th></th><th></th><th></th>
+                <th class="sortable-th" onclick="sortTable('tbl-city-compare',0,true)">储备量<span class="sort-icon">↕</span></th>
+                <th class="sortable-th" onclick="sortTable('tbl-city-compare',1,true)">预测业绩<span class="sort-icon">↕</span></th>
+                <th class="sortable-th" onclick="sortTable('tbl-city-compare',2,true)">储备量<span class="sort-icon">↕</span></th>
+                <th class="sortable-th" onclick="sortTable('tbl-city-compare',3,true)">预测业绩<span class="sort-icon">↕</span></th>
+                <th class="sortable-th" onclick="sortTable('tbl-city-compare',4,true)">储备量变化<span class="sort-icon">↕</span></th>
+                <th class="sortable-th" onclick="sortTable('tbl-city-compare',5,true)">预测业绩变化<span class="sort-icon">↕</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="total-row" style="background:#f5f7fa;font-weight:600;">
+                <td>总计</td><td>-</td><td>-</td>
+                <td>435</td><td>107w</td>
+                <td>415</td><td>101w</td>
+                <td class="change-up-bg">+20</td><td class="change-up-bg">+6w</td>
+              </tr>
+              <tr><td>粤海片区</td><td>广东省</td><td>深圳市</td><td>150</td><td>38w</td><td>130</td><td>32w</td><td class="change-up-bg">+20</td><td class="change-up-bg">+6w</td></tr>
+              <tr><td>粤海片区</td><td>广东省</td><td>广州市</td><td>100</td><td>25w</td><td>110</td><td>28w</td><td class="change-down-bg">-10</td><td class="change-down-bg">-3w</td></tr>
+              <tr><td>浙闽片区</td><td>福建省</td><td>福州市</td><td>85</td><td>20w</td><td>65</td><td>15w</td><td class="change-up-bg">+20</td><td class="change-up-bg">+5w</td></tr>
+              <tr><td>粤海片区</td><td>广东省</td><td>东莞市</td><td>55</td><td>13w</td><td>70</td><td>17w</td><td class="change-down-bg">-15</td><td class="change-down-bg">-4w</td></tr>
+              <tr><td>云桂黔片区</td><td>广西</td><td>南宁市</td><td>45</td><td>11w</td><td>40</td><td>9w</td><td class="change-up-bg">+5</td><td class="change-up-bg">+2w</td></tr>
+              <tr><td>粤海片区</td><td>广东省</td><td>佛山市</td><td>38</td><td>9w</td><td>42</td><td>10w</td><td class="change-down-bg">-4</td><td class="change-down-bg">-1w</td></tr>
+              <tr><td>粤海片区</td><td>广东省</td><td>珠海市</td><td>32</td><td>8w</td><td>28</td><td>7w</td><td class="change-up-bg">+4</td><td class="change-up-bg">+1w</td></tr>
+              <tr><td>浙闽片区</td><td>福建省</td><td>厦门市</td><td>28</td><td>7w</td><td>25</td><td>6w</td><td class="change-up-bg">+3</td><td class="change-up-bg">+1w</td></tr>
+              <tr><td>粤海片区</td><td>广东省</td><td>惠州市</td><td>25</td><td>6w</td><td>30</td><td>7w</td><td class="change-down-bg">-5</td><td class="change-down-bg">-1w</td></tr>
+              <tr><td>粤海片区</td><td>广东省</td><td>中山市</td><td>22</td><td>5w</td><td>20</td><td>5w</td><td class="change-up-bg">+2</td><td class="change-flat">0</td></tr>
+              <tr><td>浙闽片区</td><td>福建省</td><td>泉州市</td><td>18</td><td>4w</td><td>20</td><td>5w</td><td class="change-down-bg">-2</td><td class="change-down-bg">-1w</td></tr>
+              <tr><td>粤海片区</td><td>广东省</td><td>汕头市</td><td>15</td><td>4w</td><td>18</td><td>4w</td><td class="change-down-bg">-3</td><td class="change-flat">0</td></tr>
+              <tr><td>粤海片区</td><td>广东省</td><td>湛江市</td><td>12</td><td>3w</td><td>14</td><td>3w</td><td class="change-down-bg">-2</td><td class="change-flat">0</td></tr>
+              <tr><td>粤海片区</td><td>海南省</td><td>海口市</td><td>10</td><td>3w</td><td>8</td><td>2w</td><td class="change-up-bg">+2</td><td class="change-up-bg">+1w</td></tr>
+              <tr><td>粤海片区</td><td>广东省</td><td>茂名市</td><td>10</td><td>2w</td><td>5</td><td>1w</td><td class="change-up-bg">+5</td><td class="change-up-bg">+1w</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 城市-分课线看板 -->
+      <div class="card">
+        <div class="card-title">城市-分课线看板</div>
+        <div class="toggle-group" style="margin-top:8px;">
+          <button class="toggle-btn active" onclick="switchCourse(this, 'ai-course')">AI-无盒</button>
+          <button class="toggle-btn" onclick="switchCourse(this, 'robot-course')">机器人</button>
+          <button class="toggle-btn" onclick="switchCourse(this, 'science-course')">科学-有盒</button>
+        </div>
+        <div style="overflow-x:auto;">
+          <div class="course-table-wrap" id="ai-course">
+            <div class="scroll-table-wrap" style="overflow-x:auto;">
+            <table class="wire-table" id="tbl-city-course-ai">
+              <thead>
+                <tr>
+                  <th>课线</th><th>片区</th><th>省份</th><th>城市</th>
+                  <th colspan="2" style="background:#e3f2fd;">本期</th>
+                  <th colspan="2" style="background:#fff3e0;">上期</th>
+                  <th colspan="2" style="background:#fce4ec;">两期变化</th>
+                </tr>
+                <tr>
+                  <th></th><th></th><th></th><th></th>
+                  <th class="sortable-th" onclick="sortTable('tbl-city-course-ai',0,true)">储备量<span class="sort-icon">↕</span></th>
+                  <th class="sortable-th" onclick="sortTable('tbl-city-course-ai',1,true)">预测业绩<span class="sort-icon">↕</span></th>
+                  <th class="sortable-th" onclick="sortTable('tbl-city-course-ai',2,true)">储备量<span class="sort-icon">↕</span></th>
+                  <th class="sortable-th" onclick="sortTable('tbl-city-course-ai',3,true)">预测业绩<span class="sort-icon">↕</span></th>
+                  <th class="sortable-th" onclick="sortTable('tbl-city-course-ai',4,true)">储备量变化<span class="sort-icon">↕</span></th>
+                  <th class="sortable-th" onclick="sortTable('tbl-city-course-ai',5,true)">预测业绩变化<span class="sort-icon">↕</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="total-row" style="background:#f5f7fa;font-weight:600;">
+                  <td>AI无盒</td><td>-</td><td>-</td><td>-</td>
+                  <td>390</td><td>96w</td>
+                  <td>360</td><td>87w</td>
+                  <td class="change-up-bg">+30</td><td class="change-up-bg">+9w</td>
+                </tr>
+                <tr><td>AI无盒</td><td>粤海片区</td><td>广东省</td><td>深圳市</td><td>150</td><td>38w</td><td>130</td><td>32w</td><td class="change-up-bg">+20</td><td class="change-up-bg">+6w</td></tr>
+                <tr><td>AI无盒</td><td>粤海片区</td><td>广东省</td><td>广州市</td><td>95</td><td>24w</td><td>85</td><td>21w</td><td class="change-up-bg">+10</td><td class="change-up-bg">+3w</td></tr>
+                <tr><td>AI无盒</td><td>粤海片区</td><td>广东省</td><td>东莞市</td><td>55</td><td>13w</td><td>70</td><td>17w</td><td class="change-down-bg">-15</td><td class="change-down-bg">-4w</td></tr>
+                <tr><td>AI无盒</td><td>浙闽片区</td><td>福建省</td><td>福州市</td><td>60</td><td>14w</td><td>45</td><td>10w</td><td class="change-up-bg">+15</td><td class="change-up-bg">+4w</td></tr>
+                <tr><td>AI无盒</td><td>云桂黔片区</td><td>广西</td><td>南宁市</td><td>30</td><td>7w</td><td>30</td><td>7w</td><td class="change-flat">0</td><td class="change-flat">0</td></tr>
+                <tr><td>AI无盒</td><td>粤海片区</td><td>广东省</td><td>佛山市</td><td>35</td><td>8w</td><td>30</td><td>7w</td><td class="change-up-bg">+5</td><td class="change-up-bg">+1w</td></tr>
+                <tr><td>AI无盒</td><td>粤海片区</td><td>广东省</td><td>珠海市</td><td>28</td><td>7w</td><td>25</td><td>6w</td><td class="change-up-bg">+3</td><td class="change-up-bg">+1w</td></tr>
+                <tr><td>AI无盒</td><td>浙闽片区</td><td>福建省</td><td>厦门市</td><td>25</td><td>6w</td><td>22</td><td>5w</td><td class="change-up-bg">+3</td><td class="change-up-bg">+1w</td></tr>
+                <tr><td>AI无盒</td><td>粤海片区</td><td>广东省</td><td>惠州市</td><td>20</td><td>5w</td><td>18</td><td>4w</td><td class="change-up-bg">+2</td><td class="change-up-bg">+1w</td></tr>
+                <tr><td>AI无盒</td><td>粤海片区</td><td>海南省</td><td>海口市</td><td>15</td><td>4w</td><td>12</td><td>3w</td><td class="change-up-bg">+3</td><td class="change-up-bg">+1w</td></tr>
+                <tr><td>AI无盒</td><td>粤海片区</td><td>广东省</td><td>中山市</td><td>12</td><td>3w</td><td>15</td><td>4w</td><td class="change-down-bg">-3</td><td class="change-down-bg">-1w</td></tr>
+                <tr><td>AI无盒</td><td>浙闽片区</td><td>福建省</td><td>泉州市</td><td>10</td><td>3w</td><td>10</td><td>2w</td><td class="change-flat">0</td><td class="change-up-bg">+1w</td></tr>
+                <tr><td>AI无盒</td><td>粤海片区</td><td>广东省</td><td>汕头市</td><td>8</td><td>2w</td><td>6</td><td>1.5w</td><td class="change-up-bg">+2</td><td class="change-up-bg">+0.5w</td></tr>
+                <tr><td>AI无盒</td><td>粤海片区</td><td>广东省</td><td>湛江市</td><td>5</td><td>1.5w</td><td>5</td><td>1w</td><td class="change-flat">0</td><td class="change-up-bg">+0.5w</td></tr>
+                <tr><td>AI无盒</td><td>粤海片区</td><td>广东省</td><td>茂名市</td><td>5</td><td>1w</td><td>3</td><td>0.5w</td><td class="change-up-bg">+2</td><td class="change-up-bg">+0.5w</td></tr>
+              </tbody>
+            </table>
+            </div>
+          </div>
+          <div class="course-table-wrap" id="robot-course" style="display:none;">
+            <div class="scroll-table-wrap" style="overflow-x:auto;">
+            <table class="wire-table" id="tbl-city-course-robot">
+              <thead>
+                <tr>
+                  <th>课线</th><th>片区</th><th>省份</th><th>城市</th>
+                  <th colspan="2" style="background:#e3f2fd;">本期</th>
+                  <th colspan="2" style="background:#fff3e0;">上期</th>
+                  <th colspan="2" style="background:#fce4ec;">两期变化</th>
+                </tr>
+                <tr>
+                  <th></th><th></th><th></th><th></th>
+                  <th class="sortable-th" onclick="sortTable('tbl-city-course-robot',0,true)">储备量<span class="sort-icon">↕</span></th>
+                  <th class="sortable-th" onclick="sortTable('tbl-city-course-robot',1,true)">预测业绩<span class="sort-icon">↕</span></th>
+                  <th class="sortable-th" onclick="sortTable('tbl-city-course-robot',2,true)">储备量<span class="sort-icon">↕</span></th>
+                  <th class="sortable-th" onclick="sortTable('tbl-city-course-robot',3,true)">预测业绩<span class="sort-icon">↕</span></th>
+                  <th class="sortable-th" onclick="sortTable('tbl-city-course-robot',4,true)">储备量变化<span class="sort-icon">↕</span></th>
+                  <th class="sortable-th" onclick="sortTable('tbl-city-course-robot',5,true)">预测业绩变化<span class="sort-icon">↕</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="total-row" style="background:#f5f7fa;font-weight:600;">
+                  <td>机器人</td><td>-</td><td>-</td><td>-</td>
+                  <td>335</td><td>81w</td>
+                  <td>310</td><td>75w</td>
+                  <td class="change-up-bg">+25</td><td class="change-up-bg">+6w</td>
+                </tr>
+                <tr><td>机器人</td><td>粤海片区</td><td>广东省</td><td>广州市</td><td>100</td><td>25w</td><td>85</td><td>21w</td><td class="change-up-bg">+15</td><td class="change-up-bg">+4w</td></tr>
+                <tr><td>机器人</td><td>粤海片区</td><td>广东省</td><td>深圳市</td><td>85</td><td>20w</td><td>95</td><td>23w</td><td class="change-down-bg">-10</td><td class="change-down-bg">-3w</td></tr>
+                <tr><td>机器人</td><td>浙闽片区</td><td>福建省</td><td>福州市</td><td>70</td><td>17w</td><td>55</td><td>13w</td><td class="change-up-bg">+15</td><td class="change-up-bg">+4w</td></tr>
+                <tr><td>机器人</td><td>云桂黔片区</td><td>广西</td><td>南宁市</td><td>45</td><td>11w</td><td>40</td><td>9w</td><td class="change-up-bg">+5</td><td class="change-up-bg">+2w</td></tr>
+                <tr><td>机器人</td><td>粤海片区</td><td>广东省</td><td>东莞市</td><td>35</td><td>8w</td><td>35</td><td>9w</td><td class="change-flat">0</td><td class="change-down-bg">-1w</td></tr>
+                <tr><td>机器人</td><td>粤海片区</td><td>广东省</td><td>佛山市</td><td>30</td><td>7w</td><td>25</td><td>6w</td><td class="change-up-bg">+5</td><td class="change-up-bg">+1w</td></tr>
+                <tr><td>机器人</td><td>粤海片区</td><td>广东省</td><td>珠海市</td><td>22</td><td>5w</td><td>20</td><td>5w</td><td class="change-up-bg">+2</td><td class="change-flat">0</td></tr>
+                <tr><td>机器人</td><td>浙闽片区</td><td>福建省</td><td>厦门市</td><td>20</td><td>5w</td><td>18</td><td>4w</td><td class="change-up-bg">+2</td><td class="change-up-bg">+1w</td></tr>
+                <tr><td>机器人</td><td>粤海片区</td><td>广东省</td><td>惠州市</td><td>18</td><td>4w</td><td>15</td><td>3w</td><td class="change-up-bg">+3</td><td class="change-up-bg">+1w</td></tr>
+                <tr><td>机器人</td><td>粤海片区</td><td>海南省</td><td>海口市</td><td>12</td><td>3w</td><td>10</td><td>2w</td><td class="change-up-bg">+2</td><td class="change-up-bg">+1w</td></tr>
+                <tr><td>机器人</td><td>粤海片区</td><td>广东省</td><td>中山市</td><td>10</td><td>2.5w</td><td>8</td><td>2w</td><td class="change-up-bg">+2</td><td class="change-up-bg">+0.5w</td></tr>
+                <tr><td>机器人</td><td>浙闽片区</td><td>福建省</td><td>泉州市</td><td>8</td><td>2w</td><td>8</td><td>2w</td><td class="change-flat">0</td><td class="change-flat">0</td></tr>
+                <tr><td>机器人</td><td>粤海片区</td><td>广东省</td><td>汕头市</td><td>6</td><td>1.5w</td><td>5</td><td>1w</td><td class="change-up-bg">+1</td><td class="change-up-bg">+0.5w</td></tr>
+                <tr><td>机器人</td><td>粤海片区</td><td>广东省</td><td>湛江市</td><td>4</td><td>1w</td><td>4</td><td>1w</td><td class="change-flat">0</td><td class="change-flat">0</td></tr>
+                <tr><td>机器人</td><td>粤海片区</td><td>广东省</td><td>茂名市</td><td>3</td><td>1w</td><td>2</td><td>0.5w</td><td class="change-up-bg">+1</td><td class="change-up-bg">+0.5w</td></tr>
+              </tbody>
+            </table>
+            </div>
+          </div>
+          <div class="course-table-wrap" id="science-course" style="display:none;">
+            <div class="scroll-table-wrap" style="overflow-x:auto;">
+            <table class="wire-table" id="tbl-city-course-science">
+              <thead>
+                <tr>
+                  <th>课线</th><th>片区</th><th>省份</th><th>城市</th>
+                  <th colspan="2" style="background:#e3f2fd;">本期</th>
+                  <th colspan="2" style="background:#fff3e0;">上期</th>
+                  <th colspan="2" style="background:#fce4ec;">两期变化</th>
+                </tr>
+                <tr>
+                  <th></th><th></th><th></th><th></th>
+                  <th class="sortable-th" onclick="sortTable('tbl-city-course-science',0,true)">储备量<span class="sort-icon">↕</span></th>
+                  <th class="sortable-th" onclick="sortTable('tbl-city-course-science',1,true)">预测业绩<span class="sort-icon">↕</span></th>
+                  <th class="sortable-th" onclick="sortTable('tbl-city-course-science',2,true)">储备量<span class="sort-icon">↕</span></th>
+                  <th class="sortable-th" onclick="sortTable('tbl-city-course-science',3,true)">预测业绩<span class="sort-icon">↕</span></th>
+                  <th class="sortable-th" onclick="sortTable('tbl-city-course-science',4,true)">储备量变化<span class="sort-icon">↕</span></th>
+                  <th class="sortable-th" onclick="sortTable('tbl-city-course-science',5,true)">预测业绩变化<span class="sort-icon">↕</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="total-row" style="background:#f5f7fa;font-weight:600;">
+                  <td>科学有盒</td><td>-</td><td>-</td><td>-</td>
+                  <td>245</td><td>59w</td>
+                  <td>220</td><td>52w</td>
+                  <td class="change-up-bg">+25</td><td class="change-up-bg">+7w</td>
+                </tr>
+                <tr><td>科学有盒</td><td>浙闽片区</td><td>福建省</td><td>福州市</td><td>85</td><td>20w</td><td>70</td><td>16w</td><td class="change-up-bg">+15</td><td class="change-up-bg">+4w</td></tr>
+                <tr><td>科学有盒</td><td>粤海片区</td><td>广东省</td><td>深圳市</td><td>60</td><td>15w</td><td>65</td><td>16w</td><td class="change-down-bg">-5</td><td class="change-down-bg">-1w</td></tr>
+                <tr><td>科学有盒</td><td>粤海片区</td><td>广东省</td><td>广州市</td><td>50</td><td>12w</td><td>40</td><td>9w</td><td class="change-up-bg">+10</td><td class="change-up-bg">+3w</td></tr>
+                <tr><td>科学有盒</td><td>云桂黔片区</td><td>广西</td><td>南宁市</td><td>30</td><td>7w</td><td>25</td><td>6w</td><td class="change-up-bg">+5</td><td class="change-up-bg">+1w</td></tr>
+                <tr><td>科学有盒</td><td>粤海片区</td><td>广东省</td><td>东莞市</td><td>20</td><td>5w</td><td>20</td><td>5w</td><td class="change-flat">0</td><td class="change-flat">0</td></tr>
+                <tr><td>科学有盒</td><td>粤海片区</td><td>广东省</td><td>佛山市</td><td>18</td><td>4w</td><td>15</td><td>3w</td><td class="change-up-bg">+3</td><td class="change-up-bg">+1w</td></tr>
+                <tr><td>科学有盒</td><td>粤海片区</td><td>广东省</td><td>珠海市</td><td>15</td><td>3w</td><td>12</td><td>2.5w</td><td class="change-up-bg">+3</td><td class="change-up-bg">+0.5w</td></tr>
+                <tr><td>科学有盒</td><td>浙闽片区</td><td>福建省</td><td>厦门市</td><td>12</td><td>3w</td><td>10</td><td>2w</td><td class="change-up-bg">+2</td><td class="change-up-bg">+1w</td></tr>
+                <tr><td>科学有盒</td><td>粤海片区</td><td>广东省</td><td>惠州市</td><td>10</td><td>2w</td><td>8</td><td>1.5w</td><td class="change-up-bg">+2</td><td class="change-up-bg">+0.5w</td></tr>
+                <tr><td>科学有盒</td><td>粤海片区</td><td>海南省</td><td>海口市</td><td>8</td><td>2w</td><td>6</td><td>1.5w</td><td class="change-up-bg">+2</td><td class="change-up-bg">+0.5w</td></tr>
+                <tr><td>科学有盒</td><td>粤海片区</td><td>广东省</td><td>中山市</td><td>5</td><td>1.5w</td><td>5</td><td>1w</td><td class="change-flat">0</td><td class="change-up-bg">+0.5w</td></tr>
+                <tr><td>科学有盒</td><td>浙闽片区</td><td>福建省</td><td>泉州市</td><td>4</td><td>1w</td><td>4</td><td>1w</td><td class="change-flat">0</td><td class="change-flat">0</td></tr>
+                <tr><td>科学有盒</td><td>粤海片区</td><td>广东省</td><td>汕头市</td><td>3</td><td>1w</td><td>2</td><td>0.5w</td><td class="change-up-bg">+1</td><td class="change-up-bg">+0.5w</td></tr>
+                <tr><td>科学有盒</td><td>粤海片区</td><td>广东省</td><td>湛江市</td><td>2</td><td>0.5w</td><td>2</td><td>0.5w</td><td class="change-flat">0</td><td class="change-flat">0</td></tr>
+                <tr><td>科学有盒</td><td>粤海片区</td><td>广东省</td><td>茂名市</td><td>2</td><td>0.5w</td><td>1</td><td>0.3w</td><td class="change-up-bg">+1</td><td class="change-up-bg">+0.2w</td></tr>
+              </tbody>
+            </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 对比 C: BD (2.6) ===== -->
+    <div class="section" id="compare-C">
+      <div class="section-header">
+        <h2>BD 看板</h2>
+        <span class="badge">BD对比</span>
+      </div>
+
+      <div class="toggle-group">
+        <button class="toggle-btn active" onclick="toggleMode(this)">保底</button>
+        <button class="toggle-btn" onclick="toggleMode(this)">冲高</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">BD-总目标储备变化看板</div>
+        <div class="scroll-table-wrap" style="overflow-x:auto;">
+          <table class="compare-table" id="tbl-bd-compare">
+            <thead>
+              <tr>
+                <th rowspan="2">片区</th><th rowspan="2">BD</th><th rowspan="2">预测业绩目标</th>
+                <th colspan="3" style="background:#e3f2fd;">本期</th>
+                <th colspan="3" style="background:#fff3e0;">上期</th>
+                <th colspan="3" style="background:#fce4ec;">两期变化情况</th>
+              </tr>
+              <tr>
+                <th>总储备量</th><th>总预测业绩</th><th>总预测业绩达标率</th>
+                <th>总储备量</th><th>总预测业绩</th><th>总预测业绩达标率</th>
+                <th>总储备量变化</th><th>总预测业绩变化</th><th>总预测业绩达标率变化</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="total-row" style="background:#f5f7fa;font-weight:600;">
+                <td><strong>全国</strong></td><td>-</td><td>180w</td>
+                <td>660</td><td>95w</td><td>53%</td>
+                <td>645</td><td>93w</td><td>52%</td>
+                <td class="change-up-bg">+15</td><td class="change-up-bg">+2w</td><td class="change-up-bg">+1%</td>
+              </tr>
+              <tr><td>粤海片区</td><td>张三</td><td>50w</td><td>200</td><td>30w</td><td>60%</td><td>180</td><td>25w</td><td>50%</td><td class="change-up-bg">+20</td><td class="change-up-bg">+5w</td><td class="change-up-bg">+10%</td></tr>
+              <tr><td>粤海片区</td><td>李四</td><td>40w</td><td>150</td><td>22w</td><td>55%</td><td>170</td><td>26w</td><td>65%</td><td class="change-down-bg">-20</td><td class="change-down-bg">-4w</td><td class="change-down-bg">-10%</td></tr>
+              <tr><td>浙闽片区</td><td>王五</td><td>35w</td><td>130</td><td>18w</td><td>51%</td><td>110</td><td>15w</td><td>43%</td><td class="change-up-bg">+20</td><td class="change-up-bg">+3w</td><td class="change-up-bg">+8%</td></tr>
+              <tr><td>云桂黔片区</td><td>赵六</td><td>30w</td><td>100</td><td>14w</td><td>47%</td><td>120</td><td>18w</td><td>60%</td><td class="change-down-bg">-20</td><td class="change-down-bg">-4w</td><td class="change-down-bg">-13%</td></tr>
+              <tr><td>云桂黔片区</td><td>钱七</td><td>25w</td><td>80</td><td>11w</td><td>44%</td><td>65</td><td>9w</td><td>36%</td><td class="change-up-bg">+15</td><td class="change-up-bg">+2w</td><td class="change-up-bg">+8%</td></tr>
+              <tr><td>苏皖片区</td><td>孙八</td><td>22w</td><td>70</td><td>10w</td><td>45%</td><td>60</td><td>8w</td><td>36%</td><td class="change-up-bg">+10</td><td class="change-up-bg">+2w</td><td class="change-up-bg">+9%</td></tr>
+              <tr><td>苏皖片区</td><td>周九</td><td>20w</td><td>60</td><td>8w</td><td>40%</td><td>55</td><td>7w</td><td>35%</td><td class="change-up-bg">+5</td><td class="change-up-bg">+1w</td><td class="change-up-bg">+5%</td></tr>
+              <tr><td>湘鄂片区</td><td>吴十</td><td>18w</td><td>50</td><td>7w</td><td>39%</td><td>45</td><td>6w</td><td>33%</td><td class="change-up-bg">+5</td><td class="change-up-bg">+1w</td><td class="change-up-bg">+6%</td></tr>
+              <tr><td>湘鄂片区</td><td>郑十一</td><td>15w</td><td>40</td><td>6w</td><td>40%</td><td>38</td><td>5w</td><td>33%</td><td class="change-up-bg">+2</td><td class="change-up-bg">+1w</td><td class="change-up-bg">+7%</td></tr>
+              <tr><td>晋蒙片区</td><td>王十二</td><td>14w</td><td>35</td><td>5w</td><td>36%</td><td>30</td><td>4w</td><td>29%</td><td class="change-up-bg">+5</td><td class="change-up-bg">+1w</td><td class="change-up-bg">+7%</td></tr>
+              <tr><td>晋蒙片区</td><td>陈十三</td><td>12w</td><td>28</td><td>4w</td><td>33%</td><td>25</td><td>3.5w</td><td>29%</td><td class="change-up-bg">+3</td><td class="change-up-bg">+0.5w</td><td class="change-up-bg">+4%</td></tr>
+              <tr><td>黑吉辽片区</td><td>林十四</td><td>10w</td><td>22</td><td>3w</td><td>30%</td><td>20</td><td>3w</td><td>30%</td><td class="change-up-bg">+2</td><td class="change-flat">0</td><td class="change-flat">0</td></tr>
+              <tr><td>黑吉辽片区</td><td>黄十五</td><td>8w</td><td>18</td><td>2.5w</td><td>31%</td><td>15</td><td>2w</td><td>25%</td><td class="change-up-bg">+3</td><td class="change-up-bg">+0.5w</td><td class="change-up-bg">+6%</td></tr>
+              <tr><td>陕甘宁青新片区</td><td>刘十六</td><td>6w</td><td>12</td><td>1.8w</td><td>30%</td><td>10</td><td>1.5w</td><td>25%</td><td class="change-up-bg">+2</td><td class="change-up-bg">+0.3w</td><td class="change-up-bg">+5%</td></tr>
+              <tr><td>陕甘宁青新片区</td><td>杨十七</td><td>5w</td><td>8</td><td>1w</td><td>20%</td><td>6</td><td>0.8w</td><td>16%</td><td class="change-up-bg">+2</td><td class="change-up-bg">+0.2w</td><td class="change-up-bg">+4%</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="section-divider"></div>
+
+      <!-- BD-储备变化看板 -->
+      <div class="card">
+        <div class="card-title">BD-储备变化看板</div>
+        <div class="scroll-table-wrap" style="overflow-x:auto;">
+          <table class="compare-table">
+            <thead>
+              <tr>
+                <th rowspan="2">片区</th><th rowspan="2">BD</th>
+                <th colspan="3" style="background:#e3f2fd;">本期</th>
+                <th colspan="3" style="background:#fff3e0;">上期</th>
+                <th colspan="3" style="background:#fce4ec;">两期变化情况</th>
+              </tr>
+              <tr>
+                <th>总储备量</th><th>已进线量</th><th>储备量</th>
+                <th>总储备量</th><th>已进线量</th><th>储备量</th>
+                <th>总储备量变化</th><th>已进线量变化</th><th>储备量变化</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="total-row" style="background:#f5f7fa;font-weight:600;">
+                <td><strong>全国</strong></td><td>-</td>
+                <td>660</td><td>264</td><td>396</td>
+                <td>645</td><td>258</td><td>387</td>
+                <td class="change-up-bg">+15</td><td class="change-up-bg">+6</td><td class="change-up-bg">+9</td>
+              </tr>
+              <tr><td>粤海片区</td><td>张三</td><td>200</td><td>80</td><td>120</td><td>180</td><td>72</td><td>108</td><td class="change-up-bg">+20</td><td class="change-up-bg">+8</td><td class="change-up-bg">+12</td></tr>
+              <tr><td>粤海片区</td><td>李四</td><td>150</td><td>60</td><td>90</td><td>170</td><td>68</td><td>102</td><td class="change-down-bg">-20</td><td class="change-down-bg">-8</td><td class="change-down-bg">-12</td></tr>
+              <tr><td>浙闽片区</td><td>王五</td><td>130</td><td>52</td><td>78</td><td>110</td><td>44</td><td>66</td><td class="change-up-bg">+20</td><td class="change-up-bg">+8</td><td class="change-up-bg">+12</td></tr>
+              <tr><td>云桂黔片区</td><td>赵六</td><td>100</td><td>40</td><td>60</td><td>120</td><td>48</td><td>72</td><td class="change-down-bg">-20</td><td class="change-down-bg">-8</td><td class="change-down-bg">-12</td></tr>
+              <tr><td>云桂黔片区</td><td>钱七</td><td>80</td><td>32</td><td>48</td><td>65</td><td>26</td><td>39</td><td class="change-up-bg">+15</td><td class="change-up-bg">+6</td><td class="change-up-bg">+9</td></tr>
+              <tr><td>苏皖片区</td><td>孙八</td><td>70</td><td>28</td><td>42</td><td>60</td><td>24</td><td>36</td><td class="change-up-bg">+10</td><td class="change-up-bg">+4</td><td class="change-up-bg">+6</td></tr>
+              <tr><td>苏皖片区</td><td>周九</td><td>60</td><td>24</td><td>36</td><td>55</td><td>22</td><td>33</td><td class="change-up-bg">+5</td><td class="change-up-bg">+2</td><td class="change-up-bg">+3</td></tr>
+              <tr><td>湘鄂片区</td><td>吴十</td><td>50</td><td>20</td><td>30</td><td>45</td><td>18</td><td>27</td><td class="change-up-bg">+5</td><td class="change-up-bg">+2</td><td class="change-up-bg">+3</td></tr>
+              <tr><td>湘鄂片区</td><td>郑十一</td><td>40</td><td>16</td><td>24</td><td>38</td><td>15</td><td>23</td><td class="change-up-bg">+2</td><td class="change-up-bg">+1</td><td class="change-up-bg">+1</td></tr>
+              <tr><td>晋蒙片区</td><td>王十二</td><td>35</td><td>14</td><td>21</td><td>30</td><td>12</td><td>18</td><td class="change-up-bg">+5</td><td class="change-up-bg">+2</td><td class="change-up-bg">+3</td></tr>
+              <tr><td>晋蒙片区</td><td>陈十三</td><td>28</td><td>11</td><td>17</td><td>25</td><td>10</td><td>15</td><td class="change-up-bg">+3</td><td class="change-up-bg">+1</td><td class="change-up-bg">+2</td></tr>
+              <tr><td>黑吉辽片区</td><td>林十四</td><td>22</td><td>9</td><td>13</td><td>20</td><td>8</td><td>12</td><td class="change-up-bg">+2</td><td class="change-up-bg">+1</td><td class="change-up-bg">+1</td></tr>
+              <tr><td>黑吉辽片区</td><td>黄十五</td><td>18</td><td>7</td><td>11</td><td>15</td><td>6</td><td>9</td><td class="change-up-bg">+3</td><td class="change-up-bg">+1</td><td class="change-up-bg">+2</td></tr>
+              <tr><td>陕甘宁青新片区</td><td>刘十六</td><td>12</td><td>5</td><td>7</td><td>10</td><td>4</td><td>6</td><td class="change-up-bg">+2</td><td class="change-up-bg">+1</td><td class="change-up-bg">+1</td></tr>
+              <tr><td>陕甘宁青新片区</td><td>杨十七</td><td>8</td><td>3</td><td>5</td><td>6</td><td>2</td><td>4</td><td class="change-up-bg">+2</td><td class="change-up-bg">+1</td><td class="change-up-bg">+1</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== 班期版本下拉筛选器初始化 =====
+(function initBatchFilter() {
+  var months = ['1','2','3','4','5','6','7','8','9','10','11','12'];
+  // 每月4个班期日期，间隔约7天
+  var batchDates = {
+    '1':  ['0105','0112','0119','0126'],
+    '2':  ['0205','0212','0219','0226'],
+    '3':  ['0305','0312','0319','0326'],
+    '4':  ['0405','0412','0419','0426'],
+    '5':  ['0505','0512','0519','0526'],
+    '6':  ['0605','0612','0619','0626'],
+    '7':  ['0705','0712','0719','0726'],
+    '8':  ['0805','0812','0819','0826'],
+    '9':  ['0905','0912','0919','0926'],
+    '10': ['1005','1012','1019','1026'],
+    '11': ['1105','1112','1119','1126'],
+    '12': ['1205','1212','1219','1226']
+  };
+  var select = document.getElementById('batch-select');
+  select.innerHTML = '';
+  for (var i = 0; i < months.length; i++) {
+    var dates = batchDates[months[i]];
+    for (var j = 0; j < dates.length; j++) {
+      var val = '2026-' + months[i] + '月班期-' + dates[j];
+      var opt = document.createElement('option');
+      opt.value = val;
+      opt.textContent = val;
+      select.appendChild(opt);
+    }
+  }
+  // 默认显示第一个班期版本
+  window.currentBatch = select.value;
+})();
+
+function onBatchChange(val) {
+  window.currentBatch = val;
+  // 后续可接入数据刷新逻辑
+  console.log('切换到班期版本：' + val);
+}
+
+// ===== 片区/省份联动多选筛选 =====
+var regionProvinceMap = {
+  '黑吉辽片区':     ['黑龙江省','吉林省','辽宁省'],
+  '冀豫片区':       ['北京市','河北省','河南省','山东省'],
+  '津鲁片区':       ['天津市'],
+  '晋蒙片区':       ['内蒙古自治区','山西省'],
+  '陕甘宁青新片区': ['甘肃省','宁夏回族自治区','青海省','陕西省','新疆维吾尔自治区'],
+  '苏皖片区':       ['安徽省','江苏省'],
+  '湘鄂片区':       ['湖北省','湖南省'],
+  '粤海片区':       ['广东省','海南省'],
+  '云桂黔片区':     ['广西壮族自治区','贵州省','云南省'],
+  '浙闽片区':       ['福建省','浙江省'],
+  '中心片区':       ['江西省','上海市','四川省','西藏自治区'],
+  '重庆片区':       ['重庆市']
+};
+
+// 多选状态
+var regionChecked = [];
+var provinceChecked = [];
+
+function getAllProvinces() {
+  var all = [];
+  Object.keys(regionProvinceMap).forEach(function(r) {
+    regionProvinceMap[r].forEach(function(p) {
+      if (all.indexOf(p) < 0) all.push(p);
+    });
+  });
+  return all;
+}
+
+function toggleMultiSelect(type) {
+  var dropdown = document.getElementById(type + '-dropdown');
+  var outerBox = document.getElementById(type + '-filter-box');
+  var otherType = type === 'region' ? 'province' : 'region';
+  var otherDropdown = document.getElementById(otherType + '-dropdown');
+  var otherOuterBox = document.getElementById(otherType + '-filter-box');
+  otherDropdown.style.display = 'none';
+  var isOpening = dropdown.style.display !== 'block';
+  dropdown.style.display = isOpening ? 'block' : 'none';
+  if (isOpening) {
+    // 外层 header-filter 容器也要控层级，彻底解决背景框遮挡问题
+    outerBox.style.position = 'relative';
+    outerBox.style.zIndex = '1002';
+    otherOuterBox.style.position = 'relative';
+    otherOuterBox.style.zIndex = '0';
+  } else {
+    outerBox.style.zIndex = '';
+    otherOuterBox.style.zIndex = '';
+  }
+}
+
+function buildMultiOptions(type, items) {
+  var container = document.getElementById(type + '-options');
+  var checkedArr = type === 'region' ? regionChecked : provinceChecked;
+  container.innerHTML = '';
+  items.forEach(function(item) {
+    var isChecked = checkedArr.indexOf(item) >= 0;
+    var div = document.createElement('div');
+    div.className = 'multi-select-option';
+    div.innerHTML = '<input type="checkbox" value="' + item + '" ' + (isChecked ? 'checked' : '') + '><span>' + item + '</span>';
+    div.onclick = function(e) {
+      if (e.target.tagName !== 'INPUT') {
+        var cb = div.querySelector('input');
+        cb.checked = !cb.checked;
+        e.preventDefault();
+      }
+      toggleItem(type, item);
+    };
+    container.appendChild(div);
+  });
+}
+
+function toggleItem(type, item) {
+  var arr = type === 'region' ? regionChecked : provinceChecked;
+  var idx = arr.indexOf(item);
+  if (idx >= 0) arr.splice(idx, 1);
+  else arr.push(item);
+  updateMultiText(type);
+  if (type === 'region') {
+    // 片区变化时重置省份
+    provinceChecked = [];
+    buildProvinceOptions();
+    updateMultiText('province');
+  }
+}
+
+function updateMultiText(type) {
+  var textEl = document.getElementById(type + '-text');
+  var arr = type === 'region' ? regionChecked : provinceChecked;
+  if (arr.length === 0) {
+    textEl.textContent = type === 'region' ? '全部片区' : '全部省份';
+  } else if (arr.length === 1) {
+    textEl.textContent = arr[0];
+  } else {
+    textEl.textContent = '已选 ' + arr.length + ' 项';
+  }
+}
+
+function buildProvinceOptions() {
+  var provinces = [];
+  if (regionChecked.length === 0) {
+    provinces = getAllProvinces();
+  } else {
+    regionChecked.forEach(function(r) {
+      if (regionProvinceMap[r]) {
+        regionProvinceMap[r].forEach(function(p) {
+          if (provinces.indexOf(p) < 0) provinces.push(p);
+        });
+      }
+    });
+  }
+  buildMultiOptions('province', provinces);
+}
+
+function resetMultiSelect(type) {
+  if (type === 'region') {
+    regionChecked = [];
+    provinceChecked = [];
+    buildMultiOptions('region', Object.keys(regionProvinceMap));
+    buildProvinceOptions();
+    updateMultiText('region');
+    updateMultiText('province');
+  } else {
+    provinceChecked = [];
+    buildProvinceOptions();
+    updateMultiText('province');
+  }
+}
+
+function confirmMultiSelect(type) {
+  document.getElementById(type + '-dropdown').style.display = 'none';
+}
+
+// 点击外部关闭下拉
+window.addEventListener('click', function(e) {
+  if (!e.target.closest('.multi-select')) {
+    document.querySelectorAll('.multi-select-dropdown').forEach(function(d) {
+      d.style.display = 'none';
+    });
+  }
+});
+
+// 初始化
+buildMultiOptions('region', Object.keys(regionProvinceMap));
+buildProvinceOptions();
+// ========== 片区/省份多选筛选器加载完毕 ==========
+
+function switchMain(btn, mode) {
+  document.querySelectorAll('.main-nav-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('main-single').style.display = mode === 'single' ? '' : 'none';
+  document.getElementById('main-compare').style.display = mode === 'compare' ? '' : 'none';
+  // Reset sub-nav to first tab when switching
+  const subNav = document.getElementById(mode === 'single' ? 'sub-single' : 'sub-compare');
+  if (subNav) {
+    subNav.querySelectorAll('.sub-nav-btn').forEach((b, i) => {
+      b.classList.toggle('active', i === 0);
+    });
+    const parent = document.getElementById('main-' + mode);
+    parent.querySelectorAll('.section').forEach((s, i) => {
+      s.classList.toggle('active', i === 0);
+    });
+  }
+}
+
+function switchSub(btn, main, tab) {
+  const container = main === 'single' ? document.getElementById('sub-single') : document.getElementById('sub-compare');
+  container.querySelectorAll('.sub-nav-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const parent = document.getElementById('main-' + main);
+  parent.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  const target = document.getElementById(main + '-' + tab);
+  if (target) target.classList.add('active');
+}
+
+function toggleMode(el) {
+  el.parentElement.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+}
+
+// ===== Table Sorting =====
+const sortStates = {};
+
+function sortTable(tableId, colIndex, numeric) {
+  const table = document.getElementById(tableId);
+  if (!table) return;
+  const thead = table.querySelector('thead');
+  const tbody = table.querySelector('tbody');
+  if (!thead || !tbody) return;
+  
+  const headers = thead.querySelectorAll('th.sortable-th');
+  const stateKey = tableId + '_' + colIndex;
+  
+  // Toggle sort state
+  if (!sortStates[stateKey] || sortStates[stateKey] === 'none') {
+    sortStates[stateKey] = 'asc';
+  } else if (sortStates[stateKey] === 'asc') {
+    sortStates[stateKey] = 'desc';
+  } else {
+    sortStates[stateKey] = 'asc';
+  }
+  
+  // Clear other sort icons
+  headers.forEach((h, i) => {
+    if (i !== colIndex) {
+      h.classList.remove('sort-asc', 'sort-desc');
+      const otherKey = tableId + '_' + i;
+      sortStates[otherKey] = 'none';
+    }
+  });
+  
+  // Update the clicked header's icon
+  const targetHeader = headers[colIndex];
+  targetHeader.classList.remove('sort-asc', 'sort-desc');
+  if (sortStates[stateKey] === 'asc') {
+    targetHeader.classList.add('sort-asc');
+  } else if (sortStates[stateKey] === 'desc') {
+    targetHeader.classList.add('sort-desc');
+  }
+  
+  // Get all rows (skip the total/summary row if present)
+  const rows = Array.from(tbody.querySelectorAll('tr')).filter(tr => !tr.classList.contains('total-row'));
+  
+  if (rows.length === 0) return;
+  
+  // Determine the actual column index in the DOM
+  const colHeader = headers[colIndex];
+  if (!colHeader) return;
+  const allHeaders = Array.from(thead.querySelectorAll('tr:last-child th'));
+  const domColIdx = allHeaders.indexOf(colHeader);
+  if (domColIdx < 0) return;
+  
+  rows.sort((a, b) => {
+    const cellA = a.querySelectorAll('td')[domColIdx];
+    const cellB = b.querySelectorAll('td')[domColIdx];
+    if (!cellA || !cellB) return 0;
+    
+    let valA = cellA.textContent.trim();
+    let valB = cellB.textContent.trim();
+    
+    if (numeric) {
+      // Extract number: handle formats like "+15w", "-20", "63%", "15%", etc.
+      valA = parseFloat(valA.replace(/[^\d.\-+]/g, '')) || 0;
+      valB = parseFloat(valB.replace(/[^\d.\-+]/g, '')) || 0;
+    } else {
+      valA = valA.toLowerCase();
+      valB = valB.toLowerCase();
+    }
+    
+    if (valA < valB) return sortStates[stateKey] === 'asc' ? -1 : 1;
+    if (valA > valB) return sortStates[stateKey] === 'asc' ? 1 : -1;
+    return 0;
+  });
+  
+  // Re-append sorted rows
+  rows.forEach(row => tbody.appendChild(row));
+}
+
+// ===== Filter Functions =====
+function applyFilter(tableId) {
+  const table = document.getElementById(tableId);
+  if (!table) return;
+  const tbody = table.querySelector('tbody');
+  if (!tbody) return;
+  
+  const rows = Array.from(tbody.querySelectorAll('tr')).filter(tr => !tr.classList.contains('total-row'));
+  
+  // Group filters by column: find the operator (from select) and threshold (from input)
+  const filterGroups = {};
+  document.querySelectorAll('[data-filter-table="' + tableId + '"]').forEach(el => {
+    const col = parseInt(el.dataset.filterCol);
+    if (isNaN(col)) return;
+    if (!filterGroups[col]) filterGroups[col] = { op: null, val: NaN };
+    if (el.tagName === 'SELECT') filterGroups[col].op = el.value;
+    if (el.tagName === 'INPUT') filterGroups[col].val = parseFloat(el.value);
+  });
+  
+  rows.forEach(row => {
+    let visible = true;
+    
+    Object.entries(filterGroups).forEach(([colIdx, f]) => {
+      if (!visible || !f.op || isNaN(f.val)) return;
+      
+      const td = row.querySelectorAll('td')[parseInt(colIdx)];
+      if (!td) { visible = false; return; }
+      
+      let cellVal = parseFloat(td.textContent.trim().replace(/[^\d.\-+]/g, '')) || 0;
+      
+      switch (f.op) {
+        case '>': if (!(cellVal > f.val)) visible = false; break;
+        case '<': if (!(cellVal < f.val)) visible = false; break;
+        case '>=': if (!(cellVal >= f.val)) visible = false; break;
+        case '<=': if (!(cellVal <= f.val)) visible = false; break;
+        case '=':  if (!(Math.abs(cellVal - f.val) < 0.001)) visible = false; break;
+      }
+    });
+    
+    row.style.display = visible ? '' : 'none';
+  });
+  
+  // Update active filter count
+  const activeCount = Object.values(filterGroups).filter(f => f.op && !isNaN(f.val)).length;
+  const badge = document.querySelector('.adv-filter-active[data-filter-table="' + tableId + '"]');
+  if (badge) badge.textContent = activeCount > 0 ? '(' + activeCount + '个条件激活)' : '';
+}
+
+function clearFilters(tableId) {
+  document.querySelectorAll('[data-filter-table="' + tableId + '"]').forEach(el => {
+    if (el.tagName === 'INPUT') el.value = '';
+  });
+  
+  const table = document.getElementById(tableId);
+  if (table) {
+    const tbody = table.querySelector('tbody');
+    if (tbody) tbody.querySelectorAll('tr').forEach(tr => { tr.style.display = ''; });
+    table.querySelectorAll('th.sortable-th').forEach(h => h.classList.remove('sort-asc', 'sort-desc'));
+  }
+  
+  const badge = document.querySelector('.adv-filter-active[data-filter-table="' + tableId + '"]');
+  if (badge) badge.textContent = '';
+}
+function switchProject(el, projId) {
+  el.parentElement.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.project-table-wrap').forEach(t => t.style.display = 'none');
+  var target = document.getElementById(projId);
+  if (target) target.style.display = '';
+}
+function switchCourse(el, courseId) {
+  el.parentElement.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.course-table-wrap').forEach(t => t.style.display = 'none');
+  var target = document.getElementById(courseId);
+  if (target) target.style.display = '';
+}
+</script>
+
+</body>
+</html>
