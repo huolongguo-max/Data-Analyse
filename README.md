@@ -12,8 +12,23 @@
 ## 目录结构
 
 ```text
-local-data-analysis/
+Data-Analyse/
 ├─ backend/                   FastAPI 后端
+│  ├─ alembic/                数据库迁移
+│  ├─ app/                    应用代码
+│  └─ tests/                  后端测试
+├─ frontend/                  Vue 3 前端源码
+├─ reserve_processor/         单文件补全逻辑
+├─ data/                      本地文件存储目录
+│  ├─ uploads/                原始上传文件
+│  ├─ exports/                补全后导出文件
+│  ├─ backups/                备份
+│  └─ logs/                   日志
+├─ deploy/                    部署脚本（含 macOS .sh 和 Windows .bat）
+├─ docs/                      需求文档与设计资料
+├─ databoard-test.html        前端参考稿
+└─ 储备表APP搭建V2.md          当前主需求文档
+```
 │  ├─ alembic/                数据库迁移
 │  ├─ app/                    应用代码
 │  └─ tests/                  后端测试
@@ -61,25 +76,27 @@ V2 文档要求的看板数据来源已经对齐：
 
 - Python 3.11+
 - Node.js 20+
-- PostgreSQL 16+
+- PostgreSQL 16+（开发环境可选，SQLite 自动建表）
 
 说明：
 
 - 后端测试默认走 SQLite，不依赖本机 PostgreSQL
 - 正式运行仍需 PostgreSQL
-- 如果正式环境缺少 `psycopg2`，需要补装 PostgreSQL 驱动
+- 开发环境默认使用 SQLite（`DATABASE_URL=sqlite:///data/local-dev.db`），首次启动自动创建表
 
 ## 后端启动
 
+### macOS / Linux
+
 1. 复制环境变量模板
 
-```powershell
-Copy-Item .env.example .env
+```bash
+cp .env.example .env
 ```
 
 2. 配置数据库和目录
 
-至少确认这些变量：
+至少确认这些变量（`.env` 文件中）：
 
 - `DATABASE_URL`
 - `UPLOAD_DIR`
@@ -88,7 +105,40 @@ Copy-Item .env.example .env
 - `LOG_DIR`
 - `CORS_ORIGINS`
 
-3. 安装依赖并迁移数据库
+3. 安装依赖
+
+```bash
+cd backend
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+4. 启动后端
+
+```bash
+# 方式一：直接启动
+cd backend && source .venv/bin/activate
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+
+# 方式二：使用启动脚本
+./backend/start-backend.sh
+```
+
+启动后：
+
+- API 文档：`http://127.0.0.1:8000/api/docs`
+- 前端页面：`http://127.0.0.1:8000/`
+
+### Windows
+
+1. 复制环境变量模板
+
+```powershell
+Copy-Item .env.example .env
+```
+
+2. 安装依赖
 
 ```powershell
 cd backend
@@ -97,24 +147,28 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-Local development now defaults to SQLite and creates tables automatically on startup.
-Use Python 3.10+ for the backend runtime.
-Only switch `DATABASE_URL` back to PostgreSQL and run `alembic upgrade head` on the target machine.
-
-4. 启动后端
+3. 启动后端
 
 ```powershell
 uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-启动后：
-
-- API 文档：`http://127.0.0.1:8000/api/docs`
-- 前端页面：`http://127.0.0.1:8000/`
-
 ## 前端开发
 
 前端源码在 `frontend/`，开发时走 Vite，API 请求代理到本地 FastAPI。
+
+### macOS / Linux
+
+```bash
+cd frontend
+npm install
+npm run dev
+
+# 或使用启动脚本
+./frontend/start-frontend.sh
+```
+
+### Windows
 
 ```powershell
 cd frontend

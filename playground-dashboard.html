@@ -1,0 +1,1516 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>数据看板样式调试器 — Data Dashboard Design Playground</title>
+<style>
+/* ===== Playground Chrome ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --chrome-bg: #1a1a2e;
+  --chrome-surface: #242538;
+  --chrome-border: #363850;
+  --chrome-text: #c8ccda;
+  --chrome-heading: #e8eaf0;
+  --chrome-accent: #4fc3f7;
+  --chrome-accent2: #1a73e8;
+  --chrome-input-bg: #1e1f32;
+  --chrome-label: #9598b0;
+  --card-bg: #ffffff;
+}
+
+body {
+  font-family: -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  background: var(--chrome-bg);
+  color: var(--chrome-text);
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  grid-template-rows: 1fr auto;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ===== Left Panel — Controls ===== */
+.controls-panel {
+  background: var(--chrome-surface);
+  border-right: 1px solid var(--chrome-border);
+  overflow-y: auto;
+  padding: 20px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.controls-panel::-webkit-scrollbar { width: 6px; }
+.controls-panel::-webkit-scrollbar-thumb { background: var(--chrome-border); border-radius: 3px; }
+
+.controls-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.controls-header h2 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--chrome-heading);
+}
+
+.preset-select {
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid var(--chrome-border);
+  border-radius: 6px;
+  background: var(--chrome-input-bg);
+  color: var(--chrome-text);
+  cursor: pointer;
+  outline: none;
+  font-family: inherit;
+}
+
+/* ===== Control Groups ===== */
+.ctrl-group {
+  border: 1px solid var(--chrome-border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.ctrl-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: rgba(255,255,255,0.02);
+  cursor: pointer;
+  user-select: none;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--chrome-heading);
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.2s;
+}
+
+.ctrl-group-header:hover { background: rgba(255,255,255,0.04); }
+.ctrl-group.open .ctrl-group-header { border-bottom-color: var(--chrome-border); }
+
+.ctrl-group-arrow {
+  font-size: 10px;
+  color: var(--chrome-label);
+  transition: transform 0.2s;
+}
+
+.ctrl-group.open .ctrl-group-arrow { transform: rotate(180deg); }
+
+.ctrl-group-body {
+  display: none;
+  padding: 12px 14px;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ctrl-group.open .ctrl-group-body { display: flex; }
+
+/* ===== Control Rows ===== */
+.ctrl-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ctrl-row.col {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+}
+
+.ctrl-label {
+  font-size: 12px;
+  color: var(--chrome-label);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.ctrl-row.col .ctrl-label { white-space: normal; }
+
+.ctrl-input {
+  width: 90px;
+  height: 30px;
+  padding: 0 8px;
+  font-size: 12px;
+  font-family: "SF Mono", "Cascadia Code", "Menlo", monospace;
+  border: 1px solid var(--chrome-border);
+  border-radius: 6px;
+  background: var(--chrome-input-bg);
+  color: var(--chrome-text);
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.ctrl-input:focus { border-color: var(--chrome-accent2); }
+
+.ctrl-input.wide { width: 100%; }
+.ctrl-input.color { width: 46px; height: 30px; padding: 2px; cursor: pointer; }
+
+.ctrl-slider-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.ctrl-slider {
+  flex: 1;
+  -webkit-appearance: none;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--chrome-border);
+  outline: none;
+}
+
+.ctrl-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--chrome-accent);
+  cursor: pointer;
+  border: 2px solid var(--chrome-surface);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+}
+
+.ctrl-val {
+  font-size: 11px;
+  color: var(--chrome-accent);
+  font-weight: 600;
+  min-width: 32px;
+  text-align: right;
+  font-family: "SF Mono", "Cascadia Code", "Menlo", monospace;
+}
+
+/* ===== Color Swatches ===== */
+.color-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* ===== Right Panel — Preview ===== */
+.preview-panel {
+  background: #f0f2f5;
+  overflow-y: auto;
+  padding: 28px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.preview-panel::-webkit-scrollbar { width: 8px; }
+.preview-panel::-webkit-scrollbar-thumb { background: #d0d5dd; border-radius: 4px; }
+
+.preview-section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: -8px;
+}
+
+/* ===== Bottom Bar — Prompt ===== */
+.prompt-bar {
+  grid-column: 1 / -1;
+  background: var(--chrome-surface);
+  border-top: 1px solid var(--chrome-border);
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.prompt-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--chrome-heading);
+  white-space: nowrap;
+}
+
+.prompt-text {
+  flex: 1;
+  font-size: 13px;
+  color: var(--chrome-text);
+  line-height: 1.5;
+  font-family: "SF Mono", "Cascadia Code", "Menlo", monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid var(--chrome-accent2);
+  border-radius: 6px;
+  background: rgba(26,115,232,0.12);
+  color: var(--chrome-accent);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+
+.copy-btn:hover { background: rgba(26,115,232,0.22); }
+.copy-btn.copied { background: rgba(67,160,71,0.18); border-color: #43a047; color: #66bb6a; }
+
+.copy-btn svg { width: 13px; height: 13px; }
+
+/* ===== LIVE PREVIEW COMPONENTS ===== */
+/* Cards */
+.live-card {
+  background: var(--card-bg);
+  border-radius: var(--card-radius);
+  padding: var(--card-padding);
+  box-shadow: var(--card-shadow);
+  border: var(--card-border-style);
+  transition: box-shadow 0.2s;
+}
+
+.live-card:hover {
+  box-shadow: var(--card-hover-shadow);
+}
+
+.live-card-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1a1a2e;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f0f2f5;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.live-card-title::before {
+  content: '';
+  display: inline-block;
+  width: 4px;
+  height: 18px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, var(--chart-bar-blue-start), var(--chart-bar-blue-end));
+  flex-shrink: 0;
+}
+
+/* Metric Card */
+.live-metric-card {
+  background: var(--card-bg);
+  border-radius: var(--card-radius);
+  padding: var(--card-padding);
+  border: var(--card-border-style);
+  transition: transform 0.15s, box-shadow 0.15s;
+  display: flex;
+  flex-direction: column;
+  min-height: 140px;
+}
+
+.live-metric-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--card-hover-shadow);
+}
+
+.live-metric-card.highlight {
+  border-color: var(--chart-bar-blue-start);
+  background: linear-gradient(135deg, #f8fdff 0%, #fff 100%);
+}
+
+.metric-label { font-size: 12px; color: #888; margin-bottom: 8px; letter-spacing: 0.3px; }
+.metric-value { font-size: 28px; font-weight: 700; color: #1a1a2e; line-height: 1.1; }
+.metric-sub { display: flex; gap: 8px 16px; margin-top: 10px; font-size: 12px; color: #777; flex-wrap: wrap; }
+.metric-sub-item span { font-weight: 600; color: #333; }
+
+.live-progress-wrap { margin-top: auto; padding-top: 14px; }
+.live-progress-bar { height: var(--progress-height); background: #eef0f4; border-radius: var(--progress-radius); overflow: hidden; }
+.live-progress-fill {
+  height: 100%;
+  border-radius: var(--progress-radius);
+  width: 68%;
+  background: linear-gradient(90deg, var(--chart-bar-blue-start), var(--chart-bar-blue-end));
+}
+
+.metric-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+
+/* Buttons */
+.btn-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
+.live-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--btn-height);
+  padding: 0 var(--btn-padding-x);
+  font-size: var(--btn-font-size);
+  font-weight: 600;
+  border-radius: var(--btn-radius);
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s, transform 0.15s;
+  white-space: nowrap;
+  border: 1px solid transparent;
+  font-family: inherit;
+}
+
+.live-btn:hover { transform: translateY(-1px); }
+
+.live-btn.primary {
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
+}
+.live-btn.primary:hover {
+  background: var(--btn-primary-hover-bg);
+  box-shadow: 0 2px 8px rgba(26,115,232,0.3);
+}
+
+.live-btn.secondary {
+  background: var(--btn-secondary-bg);
+  border-color: var(--btn-secondary-border);
+  color: var(--btn-secondary-text);
+  box-shadow: 0 6px 16px rgba(132,149,181,0.1);
+}
+.live-btn.secondary:hover {
+  background: #f8fbff;
+  box-shadow: 0 8px 18px rgba(132,149,181,0.14);
+}
+
+.live-btn.ghost {
+  background: transparent;
+  border-color: #d0d5dd;
+  color: #334155;
+  box-shadow: none;
+}
+.live-btn.ghost:hover { background: #f5f7fb; color: #1a1a2e; }
+
+.live-btn.danger {
+  background: #ffffff;
+  color: #d93025;
+  border-color: #efc0bb;
+  box-shadow: 0 6px 16px rgba(217,48,37,0.08);
+}
+.live-btn.danger:hover { background: #fff4f3; box-shadow: 0 10px 20px rgba(217,48,37,0.12); }
+
+/* Table */
+.live-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: var(--table-radius);
+}
+.live-table-wrap::-webkit-scrollbar { height: 8px; }
+.live-table-wrap::-webkit-scrollbar-thumb { border-radius: 999px; background: #d0d5dd; }
+
+.live-table {
+  width: 100%;
+  min-width: max-content;
+  border-collapse: collapse;
+  font-size: var(--table-font-size);
+}
+
+.live-table thead th {
+  background: var(--table-head-bg);
+  color: var(--table-head-text);
+  font-weight: 600;
+  padding: var(--table-cell-padding-y) var(--table-cell-padding-x);
+  border-bottom: var(--table-head-border-bottom);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.live-table tbody td {
+  padding: var(--table-cell-padding-y) var(--table-cell-padding-x);
+  border-bottom: 1px solid var(--table-row-border);
+  color: #444;
+  text-align: center;
+  white-space: nowrap;
+  background: #fff;
+}
+
+.live-table tbody tr:hover td { background: var(--table-hover-bg); }
+.live-table tbody tr:last-child td { border-bottom: none; }
+
+.row-total td { background: #f5f7fa !important; font-weight: 700; color: #333; }
+
+/* Rank Chart */
+.live-rank-chart { display: grid; gap: var(--chart-row-gap); }
+
+.live-rank-row {
+  display: grid;
+  grid-template-columns: minmax(72px, 100px) minmax(0, 1fr) minmax(56px, 88px);
+  align-items: center;
+  gap: 12px;
+  min-height: var(--chart-bar-height);
+}
+
+.live-rank-name {
+  font-size: 12px; font-weight: 500; color: #555;
+  text-align: right; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis;
+}
+
+.live-rank-track {
+  display: flex; align-items: center;
+  height: var(--chart-bar-height);
+  border-radius: var(--chart-bar-radius);
+  background: #f0f2f5;
+  overflow: hidden;
+}
+
+.live-rank-fill {
+  height: 100%;
+  border-radius: var(--chart-bar-radius);
+  display: flex;
+  align-items: stretch;
+  overflow: hidden;
+  transition: width 0.35s ease;
+}
+
+.live-rank-segment { height: 100%; min-width: 0; }
+.live-rank-segment.primary { background: linear-gradient(90deg, var(--chart-bar-blue-start), var(--chart-bar-blue-end)); }
+.live-rank-segment.secondary { background: linear-gradient(90deg, var(--chart-bar-orange-start), var(--chart-bar-orange-end)); }
+
+.live-rank-total {
+  font-size: 12px; font-weight: 600; color: #444;
+  text-align: right; white-space: nowrap;
+}
+
+/* Tooltip */
+.live-tooltip {
+  padding: 10px 14px;
+  border-radius: var(--tooltip-radius);
+  background: rgba(26,26,46,0.94);
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  font-size: 13px;
+  width: fit-content;
+  display: inline-block;
+}
+.live-tooltip-title { margin-bottom: 5px; color: #b3d4ff; font-size: 13px; font-weight: 700; }
+.live-tooltip-row { display: flex; align-items: center; gap: 7px; padding: 2px 0; font-size: 12px; }
+.live-tooltip-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+.live-tooltip-name { flex: 1; color: #aac8e8; }
+.live-tooltip-val { color: #fff; font-weight: 700; }
+.live-tooltip-total { margin-top: 5px; padding-top: 5px; border-top: 1px solid rgba(255,255,255,0.1); color: #88aacc; font-size: 12px; }
+
+/* Delta badge */
+.live-delta {
+  display: inline-block; padding: 5px 14px;
+  border-radius: 20px; font-size: 12px; font-weight: 600;
+}
+.live-delta.up { background: #fce4ec; color: #c62828; }
+.live-delta.down { background: #e8f5e9; color: #2e7d32; }
+
+/* Stack Chart segments */
+.live-stack-track {
+  display: flex; align-items: stretch;
+  height: var(--chart-bar-height);
+  border-radius: var(--chart-bar-radius);
+  overflow: hidden;
+  background: #f0f2f5;
+}
+.live-stack-seg { height: 100%; transition: width 0.3s; }
+
+/* ===== Preview Tabs ===== */
+.preview-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: -8px;
+  flex-shrink: 0;
+}
+
+.preview-tab {
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  border-bottom: 3px solid transparent;
+  background: none;
+  color: #888;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.preview-tab:hover { color: #1a73e8; }
+.preview-tab.active {
+  color: #1a73e8;
+  border-bottom-color: #1a73e8;
+}
+
+/* ===== Mock Page Layout (Tab 2) ===== */
+.mock-page {
+  background: #f0f2f5;
+  min-width: 800px;
+}
+
+/* Mock Global Header */
+.mock-global-header {
+  background:
+    radial-gradient(circle at top left, rgba(109,183,255,0.24) 0%, transparent 32%),
+    radial-gradient(circle at top right, rgba(180,206,255,0.22) 0%, transparent 28%),
+    linear-gradient(180deg, #fcfdff 0%, #f5f8ff 100%);
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid #e3ebf7;
+  box-shadow: 0 8px 24px rgba(101,125,164,0.1);
+}
+
+.mock-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.mock-logo {
+  width: 150px;
+  height: 40px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #e8f0fe, #d4e4fc);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: #1a73e8;
+  font-weight: 700;
+}
+
+.mock-header-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #18212f;
+  white-space: nowrap;
+}
+
+.mock-header-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.mock-chip {
+  padding: 4px 10px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.84);
+  border: 1px solid #dbe5f2;
+  font-size: 11px;
+  color: #3b4a63;
+  font-weight: 600;
+}
+
+.mock-header-actions {
+  display: flex;
+  gap: 6px;
+}
+
+/* Mock Nav */
+.mock-main-nav {
+  background: #fff;
+  display: flex;
+  padding: 0 24px;
+  gap: 2px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.mock-main-nav-btn {
+  padding: 12px 22px;
+  font-size: 13px;
+  color: #666;
+  border: none;
+  background: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  font-weight: 500;
+  font-family: inherit;
+}
+
+.mock-main-nav-btn.active {
+  color: #1a73e8;
+  border-bottom-color: #1a73e8;
+  background: linear-gradient(180deg, rgba(26,115,232,0.04) 0%, transparent 100%);
+}
+
+.mock-sub-nav {
+  background: #fff;
+  border-bottom: 1px solid #e8ecf0;
+  display: flex;
+  padding: 0 24px;
+}
+
+.mock-sub-nav-btn {
+  padding: 10px 18px;
+  font-size: 12px;
+  color: #777;
+  border: none;
+  background: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  font-weight: 500;
+  font-family: inherit;
+}
+
+.mock-sub-nav-btn.active {
+  color: #1a73e8;
+  border-bottom-color: #1a73e8;
+  font-weight: 600;
+}
+
+.mock-sub-nav-btn:hover { color: #1a73e8; }
+
+/* Mock Content */
+.mock-content {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.mock-overview-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.mock-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.mock-section-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin-bottom: 4px;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 900px) {
+  body { grid-template-columns: 1fr; grid-template-rows: auto 1fr auto; }
+  .controls-panel { max-height: 40vh; }
+  .mock-overview-row, .mock-grid-2 { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- ===== LEFT PANEL ===== -->
+<div class="controls-panel" id="controls">
+  <div class="controls-header">
+    <h2>🎛️ 样式控制器</h2>
+    <select class="preset-select" id="presetSelect" onchange="applyPreset(this.value)">
+      <option value="default">📋 当前默认</option>
+      <option value="compact">📐 紧凑布局</option>
+      <option value="airy">☁️ 松散舒适</option>
+      <option value="sharp">🔷 锐利直角</option>
+      <option value="dark-card">🌙 暗色卡片</option>
+    </select>
+  </div>
+
+  <!-- Buttons Group -->
+  <div class="ctrl-group open" id="grp-buttons">
+    <div class="ctrl-group-header" onclick="toggleGroup('grp-buttons')">
+      🔘 按钮 Buttons
+      <span class="ctrl-group-arrow">▼</span>
+    </div>
+    <div class="ctrl-group-body">
+      <div class="ctrl-row">
+        <span class="ctrl-label">圆角 radius</span>
+        <div class="ctrl-slider-wrap">
+          <input class="ctrl-slider" type="range" min="0" max="24" value="7" data-key="btnRadius" oninput="onSlider(this)">
+          <span class="ctrl-val" id="val-btnRadius">7px</span>
+        </div>
+      </div>
+      <div class="ctrl-row">
+        <span class="ctrl-label">高度 height</span>
+        <div class="ctrl-slider-wrap">
+          <input class="ctrl-slider" type="range" min="28" max="48" value="36" data-key="btnHeight" oninput="onSlider(this)">
+          <span class="ctrl-val" id="val-btnHeight">36px</span>
+        </div>
+      </div>
+      <div class="ctrl-row">
+        <span class="ctrl-label">水平内边距</span>
+        <div class="ctrl-slider-wrap">
+          <input class="ctrl-slider" type="range" min="10" max="32" value="18" data-key="btnPaddingX" oninput="onSlider(this)">
+          <span class="ctrl-val" id="val-btnPaddingX">18px</span>
+        </div>
+      </div>
+      <div class="ctrl-row">
+        <span class="ctrl-label">字号 font-size</span>
+        <div class="ctrl-slider-wrap">
+          <input class="ctrl-slider" type="range" min="11" max="16" value="13" data-key="btnFontSize" oninput="onSlider(this)">
+          <span class="ctrl-val" id="val-btnFontSize">13px</span>
+        </div>
+      </div>
+      <div class="ctrl-row">
+        <span class="ctrl-label">主色背景</span>
+        <input class="ctrl-input color" type="color" value="#1a73e8" data-key="btnPrimaryBg" oninput="onColor(this)">
+      </div>
+      <div class="ctrl-row">
+        <span class="ctrl-label">主色 hover</span>
+        <input class="ctrl-input color" type="color" value="#1558b0" data-key="btnPrimaryHoverBg" oninput="onColor(this)">
+      </div>
+    </div>
+  </div>
+
+  <!-- Table Group -->
+  <div class="ctrl-group open" id="grp-table">
+    <div class="ctrl-group-header" onclick="toggleGroup('grp-table')">
+      📊 表格 Tables
+      <span class="ctrl-group-arrow">▼</span>
+    </div>
+    <div class="ctrl-group-body">
+      <div class="ctrl-row">
+        <span class="ctrl-label">字号 font-size</span>
+        <div class="ctrl-slider-wrap">
+          <input class="ctrl-slider" type="range" min="11" max="16" value="13" data-key="tableFontSize" oninput="onSlider(this)">
+          <span class="ctrl-val" id="val-tableFontSize">13px</span>
+        </div>
+      </div>
+      <div class="ctrl-row">
+        <span class="ctrl-label">单元格垂直间距</span>
+        <div class="ctrl-slider-wrap">
+          <input class="ctrl-slider" type="range" min="6" max="18" value="11" data-key="tableCellPadY" oninput="onSlider(this)">
+          <span class="ctrl-val" id="val-tableCellPadY">11px</span>
+        </div>
+      </div>
+      <div class="ctrl-row">
+        <span class="ctrl-label">单元格水平间距</span>
+        <div class="ctrl-slider-wrap">
+          <input class="ctrl-slider" type="range" min="6" max="22" value="14" data-key="tableCellPadX" oninput="onSlider(this)">
+          <span class="ctrl-val" id="val-tableCellPadX">14px</span>
+        </div>
+      </div>
+      <div class="ctrl-row">
+        <span class="ctrl-label">表头背景</span>
+        <input class="ctrl-input color" type="color" value="#f5f7fa" data-key="tableHeadBg" oninput="onColor(this)">
+      </div>
+      <div class="ctrl-row">
+        <span class="ctrl-label">表头文字颜色</span>
+        <input class="ctrl-input color" type="color" value="#555555" data-key="tableHeadText" oninput="onColor(this)">
+      </div>
+      <div class="ctrl-row">
+        <span class="ctrl-label">行 hover 背景</span>
+        <input class="ctrl-input color" type="color" value="#f8faff" data-key="tableHoverBg" oninput="onColor(this)">
+      </div>
+      <div class="ctrl-row">
+        <span class="ctrl-label">行分隔线颜色</span>
+        <input class="ctrl-input color" type="color" value="#f0f2f5" data-key="tableRowBorder" oninput="onColor(this)">
+      </div>
+      <div class="ctrl-row">
+        <span class="ctrl-label">表头底线</span>
+        <select class="ctrl-input wide" data-key="tableHeadBorder" oninput="onSelect(this)">
+          <option value="2px solid #e0e4e8">2px solid (默认)</option>
+          <option value="1px solid #e0e4e8">1px solid (细)</option>
+          <option value="3px solid #1a73e8">3px solid (强调色)</option>
+          <option value="2px solid #d0d5dd">2px solid (柔和)</option>
+        </select>
+      </div>
+      <div class="ctrl-row">
+        <span class="ctrl-label">表格圆角</span>
+        <div class="ctrl-slider-wrap">
+          <input class="ctrl-slider" type="range" min="0" max="16" value="10" data-key="tableRadius" oninput="onSlider(this)">
+          <span class="ctrl-val" id="val-tableRadius">10px</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts Group -->
+  <div class="ctrl-group open" id="grp-charts">
+    <div class="ctrl-group-header" onclick="toggleGroup('grp-charts')">
+      📈 图表 Charts
+      <span class="ctrl-group-arrow">▼</span>
+    </div>
+    <div class="ctrl-group-body">
+      <div class="ctrl-row">
+        <span class="ctrl-label">柱状条高度</span>
+        <div class="ctrl-slider-wrap">
+          <input class="ctrl-slider" type="range" min="18" max="40" value="28" data-key="chartBarHeight" oninput="onSlider(this)">
+          <span class="ctrl-val" id="val-chartBarHeight">28px</span>
+        </div>
+      </div>
+      <div class="ctrl-row">
+        <span class="ctrl-label">柱状条圆角</span>
+        <div class="ctrl-slider-wrap">
+          <input class="ctrl-slider" type="range" min="0" max="20" value="5" data-key="chartBarRadius" oninput="onSlider(this)">
+          <span class="ctrl-val" id="val-chartBarRadius">5px</span>
+        </div>
+      </div>
+      <div class="ctrl-row">
+        <span class="ctrl-label">行间距 gap</span>
+        <div class="ctrl-slider-wrap">
+          <input class="ctrl-slider" type="range" min="4" max="24" value="14" data-key="chartRowGap" oninput="onSlider(this)">
+          <span class="ctrl-val" id="val-chartRowGap">14px</span>
+        </div>
+      </div>
+      <div class="ctrl-row">
+        <span class="ctrl-label">蓝色起始</span>
+        <input class="ctrl-input color" type="color" value="#4fc3f7" data-key="chartBlueStart" oninput="onColor(this)">
+      </div>
+      <div class="ctrl-row">
+        <span class="ctrl-label">蓝色结束</span>
+        <input class="ctrl-input color" type="color" value="#1a73e8" data-key="chartBlueEnd" oninput="onColor(this)">
+      </div>
+      <div class="ctrl-row">
+        <span class="ctrl-label">橙色起始</span>
+        <input class="ctrl-input color" type="color" value="#ffcc80" data-key="chartOrangeStart" oninput="onColor(this)">
+      </div>
+      <div class="ctrl-row">
+        <span class="ctrl-label">橙色结束</span>
+        <input class="ctrl-input color" type="color" value="#ff9f43" data-key="chartOrangeEnd" oninput="onColor(this)">
+      </div>
+      <div class="ctrl-row">
+        <span class="ctrl-label">提示框圆角</span>
+        <div class="ctrl-slider-wrap">
+          <input class="ctrl-slider" type="range" min="0" max="16" value="10" data-key="tooltipRadius" oninput="onSlider(this)">
+          <span class="ctrl-val" id="val-tooltipRadius">10px</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cards Group -->
+  <div class="ctrl-group open" id="grp-cards">
+    <div class="ctrl-group-header" onclick="toggleGroup('grp-cards')">
+      🃏 卡片 Cards
+      <span class="ctrl-group-arrow">▼</span>
+    </div>
+    <div class="ctrl-group-body">
+      <div class="ctrl-row">
+        <span class="ctrl-label">圆角 radius</span>
+        <div class="ctrl-slider-wrap">
+          <input class="ctrl-slider" type="range" min="0" max="24" value="14" data-key="cardRadius" oninput="onSlider(this)">
+          <span class="ctrl-val" id="val-cardRadius">14px</span>
+        </div>
+      </div>
+      <div class="ctrl-row">
+        <span class="ctrl-label">内边距 padding</span>
+        <div class="ctrl-slider-wrap">
+          <input class="ctrl-slider" type="range" min="12" max="36" value="24" data-key="cardPadding" oninput="onSlider(this)">
+          <span class="ctrl-val" id="val-cardPadding">24px</span>
+        </div>
+      </div>
+      <div class="ctrl-row">
+        <span class="ctrl-label">阴影强度</span>
+        <div class="ctrl-slider-wrap">
+          <input class="ctrl-slider" type="range" min="0" max="20" value="4" data-key="cardShadow" oninput="onSlider(this)">
+          <span class="ctrl-val" id="val-cardShadow">4</span>
+        </div>
+      </div>
+      <div class="ctrl-row">
+        <span class="ctrl-label">边框颜色</span>
+        <input class="ctrl-input color" type="color" value="#eef0f4" data-key="cardBorder" oninput="onColor(this)">
+      </div>
+      <div class="ctrl-row">
+        <span class="ctrl-label">进度条高度</span>
+        <div class="ctrl-slider-wrap">
+          <input class="ctrl-slider" type="range" min="4" max="16" value="10" data-key="progressHeight" oninput="onSlider(this)">
+          <span class="ctrl-val" id="val-progressHeight">10px</span>
+        </div>
+      </div>
+      <div class="ctrl-row">
+        <span class="ctrl-label">进度条圆角</span>
+        <div class="ctrl-slider-wrap">
+          <input class="ctrl-slider" type="range" min="0" max="16" value="5" data-key="progressRadius" oninput="onSlider(this)">
+          <span class="ctrl-val" id="val-progressRadius">5px</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== RIGHT PANEL — LIVE PREVIEW ===== -->
+<div class="preview-panel" id="preview">
+
+  <!-- Tab Bar -->
+  <div class="preview-tabs">
+    <button class="preview-tab active" data-tab="component" onclick="switchTab('component')">🔬 组件聚焦</button>
+    <button class="preview-tab" data-tab="layout" onclick="switchTab('layout')">📄 页面布局</button>
+  </div>
+
+  <!-- ===== TAB 1: Component Focus ===== -->
+  <div id="component-preview">
+
+  <div class="preview-section-title">🔘 按钮 Buttons</div>
+  <div class="live-card">
+    <div class="btn-row">
+      <button class="live-btn primary">主要操作</button>
+      <button class="live-btn secondary">次要操作</button>
+      <button class="live-btn ghost">幽灵按钮</button>
+      <button class="live-btn danger">危险操作</button>
+    </div>
+  </div>
+
+  <div class="preview-section-title">🃏 指标卡片 Metric Cards</div>
+  <div class="metric-row">
+    <div class="live-metric-card highlight">
+      <div class="metric-label">本期已交付储备</div>
+      <div class="metric-value">1,247<span style="font-size:16px;color:#888;"> 人</span></div>
+      <div class="metric-sub">
+        <div class="metric-sub-item">目标 <span>1,500 人</span></div>
+        <div class="metric-sub-item">达成率 <span>83.1%</span></div>
+      </div>
+      <div class="live-progress-wrap">
+        <div class="live-progress-bar"><div class="live-progress-fill"></div></div>
+      </div>
+    </div>
+    <div class="live-metric-card">
+      <div class="metric-label">在培人数</div>
+      <div class="metric-value">386<span style="font-size:16px;color:#888;"> 人</span></div>
+      <div class="metric-sub">
+        <div class="metric-sub-item">较上期 <span style="color:#2e7d32;">↓ 24 人</span></div>
+      </div>
+      <div class="live-progress-wrap">
+        <div class="live-progress-bar"><div class="live-progress-fill" style="width:45%;background:linear-gradient(90deg,#ffb74d,#ff9800);"></div></div>
+      </div>
+    </div>
+    <div class="live-metric-card">
+      <div class="metric-label">待入职储备</div>
+      <div class="metric-value">203<span style="font-size:16px;color:#888;"> 人</span></div>
+      <div class="metric-sub">
+        <div class="metric-sub-item">较上期 <span style="color:#c62828;">↑ 18 人</span></div>
+      </div>
+      <div class="live-delta up">↑ 9.7%</div>
+    </div>
+  </div>
+
+  <div class="preview-section-title">📊 数据表格 Data Table</div>
+  <div class="live-card">
+    <div class="live-card-title">各省份交付明细</div>
+    <div class="live-table-wrap">
+      <table class="live-table">
+        <thead>
+          <tr>
+            <th>省份</th><th>目标</th><th>已交付</th><th>在培</th><th>达成率</th><th>较上期</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>广东省</td><td>320</td><td>278</td><td>42</td><td>86.9%</td><td><span style="color:#2e7d32;">↓ 12</span></td></tr>
+          <tr><td>江苏省</td><td>260</td><td>215</td><td>38</td><td>82.7%</td><td><span style="color:#c62828;">↑ 8</span></td></tr>
+          <tr><td>浙江省</td><td>240</td><td>198</td><td>35</td><td>82.5%</td><td><span style="color:#2e7d32;">↓ 5</span></td></tr>
+          <tr><td>山东省</td><td>200</td><td>167</td><td>28</td><td>83.5%</td><td><span style="color:#c62828;">↑ 3</span></td></tr>
+          <tr class="row-total"><td>合计</td><td>1,020</td><td>858</td><td>143</td><td>84.1%</td><td>—</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="preview-section-title">📈 排名图表 Rank Chart</div>
+  <div class="live-card">
+    <div class="live-card-title">各省份交付排名</div>
+    <div class="live-rank-chart">
+      <div class="live-rank-row">
+        <span class="live-rank-name">广东省</span>
+        <div class="live-rank-track"><div class="live-rank-fill" style="width:100%"><div class="live-rank-segment primary" style="width:65%"></div><div class="live-rank-segment secondary" style="width:35%"></div></div></div>
+        <span class="live-rank-total">278 / 320</span>
+      </div>
+      <div class="live-rank-row">
+        <span class="live-rank-name">江苏省</span>
+        <div class="live-rank-track"><div class="live-rank-fill" style="width:82%"><div class="live-rank-segment primary" style="width:58%"></div><div class="live-rank-segment secondary" style="width:42%"></div></div></div>
+        <span class="live-rank-total">215 / 260</span>
+      </div>
+      <div class="live-rank-row">
+        <span class="live-rank-name">浙江省</span>
+        <div class="live-rank-track"><div class="live-rank-fill" style="width:75%"><div class="live-rank-segment primary" style="width:60%"></div><div class="live-rank-segment secondary" style="width:40%"></div></div></div>
+        <span class="live-rank-total">198 / 240</span>
+      </div>
+      <div class="live-rank-row">
+        <span class="live-rank-name">山东省</span>
+        <div class="live-rank-track"><div class="live-rank-fill" style="width:68%"><div class="live-rank-segment primary" style="width:55%"></div><div class="live-rank-segment secondary" style="width:45%"></div></div></div>
+        <span class="live-rank-total">167 / 200</span>
+      </div>
+      <div class="live-rank-row">
+        <span class="live-rank-name">四川省</span>
+        <div class="live-rank-track"><div class="live-rank-fill" style="width:62%"><div class="live-rank-segment primary" style="width:52%"></div><div class="live-rank-segment secondary" style="width:48%"></div></div></div>
+        <span class="live-rank-total">148 / 180</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="preview-section-title">💬 提示框 Tooltip</div>
+  <div class="live-card" style="display:flex;gap:20px;align-items:flex-start;">
+    <div class="live-tooltip">
+      <div class="live-tooltip-title">广东省</div>
+      <div class="live-tooltip-row">
+        <span class="live-tooltip-dot" style="background:#1a73e8"></span>
+        <span class="live-tooltip-name">本期已交付</span>
+        <span class="live-tooltip-val">278 人</span>
+      </div>
+      <div class="live-tooltip-row">
+        <span class="live-tooltip-dot" style="background:#ff9f43"></span>
+        <span class="live-tooltip-name">上期已交付</span>
+        <span class="live-tooltip-val">290 人</span>
+      </div>
+      <div class="live-tooltip-total">合计：278 / 320</div>
+    </div>
+
+    <div class="live-stack-track" style="width:300px;">
+      <div class="live-stack-seg" style="width:40%;background:linear-gradient(90deg,var(--chart-bar-blue-start),var(--chart-bar-blue-end));"></div>
+      <div class="live-stack-seg" style="width:25%;background:linear-gradient(90deg,var(--chart-bar-orange-start),var(--chart-bar-orange-end));"></div>
+      <div class="live-stack-seg" style="width:18%;background:linear-gradient(90deg,#a5d6a7,#43a047);"></div>
+      <div class="live-stack-seg" style="width:12%;background:linear-gradient(90deg,#f8b4d9,#ec4899);"></div>
+      <div class="live-stack-seg" style="width:5%;background:linear-gradient(90deg,#c4b5fd,#7c3aed);"></div>
+    </div>
+  </div>
+
+  </div><!-- /#component-preview -->
+
+  <!-- ===== TAB 2: Page Layout ===== -->
+  <div id="layout-preview" style="display:none;">
+  <div class="mock-page">
+
+    <!-- Global Header -->
+    <div class="mock-global-header">
+      <div class="mock-brand">
+        <div class="mock-logo">🏷️ 品牌 Logo</div>
+        <div class="mock-header-title">储备数据可视化看板</div>
+      </div>
+      <div class="mock-header-chips">
+        <span class="mock-chip">📅 2025-01</span>
+        <span class="mock-chip">📤 第 3 批次</span>
+        <span class="mock-chip">🏢 全国</span>
+      </div>
+      <div class="mock-header-actions">
+        <button class="live-btn secondary" style="height:32px;padding:0 14px;font-size:12px;">切换周期</button>
+        <button class="live-btn primary" style="height:32px;padding:0 14px;font-size:12px;">上传数据</button>
+      </div>
+    </div>
+
+    <!-- Main Nav -->
+    <div class="mock-main-nav">
+      <button class="mock-main-nav-btn active">看板总览</button>
+      <button class="mock-main-nav-btn">按课线分析</button>
+    </div>
+
+    <!-- Sub Nav -->
+    <div class="mock-sub-nav">
+      <button class="mock-sub-nav-btn active">总览</button>
+      <button class="mock-sub-nav-btn">片区</button>
+      <button class="mock-sub-nav-btn">省市</button>
+      <button class="mock-sub-nav-btn">BD</button>
+    </div>
+
+    <!-- Content -->
+    <div class="mock-content">
+
+      <!-- Overview Row: 2 columns of metric cards -->
+      <div class="mock-overview-row">
+        <div class="live-card">
+          <div class="live-card-title">业绩板块</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div class="live-metric-card highlight" style="min-height:120px;">
+              <div class="metric-label">预测业绩目标</div>
+              <div class="metric-value">8,520<span style="font-size:14px;color:#888;"> 万</span></div>
+            </div>
+            <div class="live-metric-card" style="min-height:120px;">
+              <div class="metric-label">总预测业绩</div>
+              <div class="metric-value">7,831<span style="font-size:14px;color:#888;"> 万</span></div>
+              <div class="live-progress-wrap">
+                <div class="live-progress-bar"><div class="live-progress-fill" style="width:91.9%;"></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="live-card">
+          <div class="live-card-title">储备板块</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div class="live-metric-card highlight" style="min-height:120px;">
+              <div class="metric-label">总储备量</div>
+              <div class="metric-value">1,247<span style="font-size:14px;color:#888;"> 人</span></div>
+              <div class="metric-sub">
+                <div class="metric-sub-item">较上期 <span style="color:#2e7d32;">↓ 24 人</span></div>
+              </div>
+            </div>
+            <div class="live-metric-card" style="min-height:120px;">
+              <div class="metric-label">已进线量</div>
+              <div class="metric-value">892<span style="font-size:14px;color:#888;"> 人</span></div>
+              <div style="margin-top:auto;padding-top:8px;"><span class="live-delta down">↓ 2.6%</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Grid-2 Row: Table + Chart side by side (like the actual app) -->
+      <div class="mock-grid-2">
+        <div class="live-card">
+          <div class="live-card-title">片区-业绩看板</div>
+          <div class="live-table-wrap">
+            <table class="live-table">
+              <thead>
+                <tr><th>片区</th><th>预测业绩目标</th><th>总预测业绩</th><th>达标率</th><th>较上期</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>华东片区</td><td>2,800 万</td><td>2,612 万</td><td>93.3%</td><td><span style="color:#2e7d32;">↓ 1.2%</span></td></tr>
+                <tr><td>华南片区</td><td>2,400 万</td><td>2,198 万</td><td>91.6%</td><td><span style="color:#c62828;">↑ 2.1%</span></td></tr>
+                <tr><td>华北片区</td><td>1,900 万</td><td>1,723 万</td><td>90.7%</td><td><span style="color:#2e7d32;">↓ 0.8%</span></td></tr>
+                <tr><td>西南片区</td><td>1,420 万</td><td>1,298 万</td><td>91.4%</td><td><span style="color:#c62828;">↑ 3.5%</span></td></tr>
+                <tr class="row-total"><td>合计</td><td>8,520 万</td><td>7,831 万</td><td>91.9%</td><td>—</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="live-card">
+          <div class="live-card-title">片区-储备看板</div>
+          <div class="live-rank-chart">
+            <div class="live-rank-row">
+              <span class="live-rank-name">华东片区</span>
+              <div class="live-rank-track"><div class="live-rank-fill" style="width:100%"><div class="live-rank-segment primary" style="width:70%"></div><div class="live-rank-segment secondary" style="width:30%"></div></div></div>
+              <span class="live-rank-total">412 人</span>
+            </div>
+            <div class="live-rank-row">
+              <span class="live-rank-name">华南片区</span>
+              <div class="live-rank-track"><div class="live-rank-fill" style="width:85%"><div class="live-rank-segment primary" style="width:62%"></div><div class="live-rank-segment secondary" style="width:38%"></div></div></div>
+              <span class="live-rank-total">348 人</span>
+            </div>
+            <div class="live-rank-row">
+              <span class="live-rank-name">华北片区</span>
+              <div class="live-rank-track"><div class="live-rank-fill" style="width:72%"><div class="live-rank-segment primary" style="width:58%"></div><div class="live-rank-segment secondary" style="width:42%"></div></div></div>
+              <span class="live-rank-total">296 人</span>
+            </div>
+            <div class="live-rank-row">
+              <span class="live-rank-name">西南片区</span>
+              <div class="live-rank-track"><div class="live-rank-fill" style="width:55%"><div class="live-rank-segment primary" style="width:55%"></div><div class="live-rank-segment secondary" style="width:45%"></div></div></div>
+              <span class="live-rank-total">191 人</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /.mock-content -->
+  </div><!-- /.mock-page -->
+  </div><!-- /#layout-preview -->
+
+</div>
+
+<!-- ===== BOTTOM BAR ===== -->
+<div class="prompt-bar">
+  <span class="prompt-label">📋 Prompt</span>
+  <span class="prompt-text" id="promptText">更新看板样式：保持现有默认设计。</span>
+  <button class="copy-btn" id="copyBtn" onclick="copyPrompt()">
+    <svg viewBox="0 0 16 16" fill="currentColor"><path d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V2zm2-1a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H6zM2 5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1H10v1H2V6h1V5H2z"/></svg>
+    复制
+  </button>
+</div>
+
+<script>
+// ===== DEFAULTS =====
+const DEFAULTS = {
+  btnRadius: 7, btnHeight: 36, btnPaddingX: 18, btnFontSize: 13,
+  btnPrimaryBg: '#1a73e8', btnPrimaryHoverBg: '#1558b0',
+  tableFontSize: 13, tableCellPadY: 11, tableCellPadX: 14,
+  tableHeadBg: '#f5f7fa', tableHeadText: '#555555', tableHoverBg: '#f8faff',
+  tableRowBorder: '#f0f2f5', tableHeadBorder: '2px solid #e0e4e8', tableRadius: 10,
+  chartBarHeight: 28, chartBarRadius: 5, chartRowGap: 14,
+  chartBlueStart: '#4fc3f7', chartBlueEnd: '#1a73e8',
+  chartOrangeStart: '#ffcc80', chartOrangeEnd: '#ff9f43',
+  tooltipRadius: 10,
+  cardRadius: 14, cardPadding: 24, cardShadow: 4, cardBorder: '#eef0f4',
+  progressHeight: 10, progressRadius: 5,
+};
+
+const PRESETS = {
+  default: { ...DEFAULTS },
+  compact: {
+    btnRadius: 4, btnHeight: 30, btnPaddingX: 14, btnFontSize: 12,
+    btnPrimaryBg: '#1a73e8', btnPrimaryHoverBg: '#1558b0',
+    tableFontSize: 12, tableCellPadY: 7, tableCellPadX: 10,
+    tableHeadBg: '#f5f7fa', tableHeadText: '#555555', tableHoverBg: '#f8faff',
+    tableRowBorder: '#f0f2f5', tableHeadBorder: '1px solid #e0e4e8', tableRadius: 6,
+    chartBarHeight: 22, chartBarRadius: 3, chartRowGap: 6,
+    chartBlueStart: '#4fc3f7', chartBlueEnd: '#1a73e8',
+    chartOrangeStart: '#ffcc80', chartOrangeEnd: '#ff9f43',
+    tooltipRadius: 6,
+    cardRadius: 8, cardPadding: 14, cardShadow: 2, cardBorder: '#eef0f4',
+    progressHeight: 6, progressRadius: 3,
+  },
+  airy: {
+    btnRadius: 12, btnHeight: 44, btnPaddingX: 28, btnFontSize: 15,
+    btnPrimaryBg: '#1a73e8', btnPrimaryHoverBg: '#1558b0',
+    tableFontSize: 14, tableCellPadY: 16, tableCellPadX: 20,
+    tableHeadBg: '#eef2fb', tableHeadText: '#333333', tableHoverBg: '#f0f4ff',
+    tableRowBorder: '#eef0f4', tableHeadBorder: '2px solid #c7d2e5', tableRadius: 14,
+    chartBarHeight: 36, chartBarRadius: 10, chartRowGap: 20,
+    chartBlueStart: '#4fc3f7', chartBlueEnd: '#1a73e8',
+    chartOrangeStart: '#ffcc80', chartOrangeEnd: '#ff9f43',
+    tooltipRadius: 14,
+    cardRadius: 20, cardPadding: 32, cardShadow: 8, cardBorder: '#eef0f4',
+    progressHeight: 14, progressRadius: 7,
+  },
+  sharp: {
+    btnRadius: 0, btnHeight: 36, btnPaddingX: 20, btnFontSize: 13,
+    btnPrimaryBg: '#1a1a2e', btnPrimaryHoverBg: '#333355',
+    tableFontSize: 13, tableCellPadY: 10, tableCellPadX: 14,
+    tableHeadBg: '#1a1a2e', tableHeadText: '#ffffff', tableHoverBg: '#f0f0f5',
+    tableRowBorder: '#e0e0e0', tableHeadBorder: '2px solid #1a1a2e', tableRadius: 0,
+    chartBarHeight: 24, chartBarRadius: 0, chartRowGap: 8,
+    chartBlueStart: '#1a73e8', chartBlueEnd: '#1a73e8',
+    chartOrangeStart: '#ff9f43', chartOrangeEnd: '#ff9f43',
+    tooltipRadius: 0,
+    cardRadius: 0, cardPadding: 24, cardShadow: 2, cardBorder: '#d0d0d0',
+    progressHeight: 8, progressRadius: 0,
+  },
+  'dark-card': {
+    btnRadius: 8, btnHeight: 36, btnPaddingX: 20, btnFontSize: 13,
+    btnPrimaryBg: '#6366f1', btnPrimaryHoverBg: '#4f46e5',
+    tableFontSize: 13, tableCellPadY: 11, tableCellPadX: 14,
+    tableHeadBg: '#2d2d3f', tableHeadText: '#c8ccda', tableHoverBg: '#2a2a3c',
+    tableRowBorder: '#2d2d3f', tableHeadBorder: '2px solid #4f46e5', tableRadius: 10,
+    chartBarHeight: 28, chartBarRadius: 6, chartRowGap: 14,
+    chartBlueStart: '#818cf8', chartBlueEnd: '#6366f1',
+    chartOrangeStart: '#fbbf24', chartOrangeEnd: '#f59e0b',
+    tooltipRadius: 10,
+    cardRadius: 14, cardPadding: 24, cardShadow: 6, cardBorder: '#363850',
+    progressHeight: 10, progressRadius: 5,
+  },
+};
+
+// ===== STATE =====
+const state = { ...DEFAULTS };
+let activeTab = 'component'; // 'component' | 'layout'
+
+// ===== TAB SWITCHING =====
+function switchTab(tab) {
+  activeTab = tab;
+  document.querySelectorAll('.preview-tab').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.tab === tab);
+  });
+  document.getElementById('component-preview').style.display = tab === 'component' ? '' : 'none';
+  document.getElementById('layout-preview').style.display = tab === 'layout' ? '' : 'none';
+  updatePrompt();
+}
+
+// ===== INIT =====
+function init() {
+  // Sync sliders and color inputs from state
+  document.querySelectorAll('[data-key]').forEach(el => {
+    const key = el.dataset.key;
+    if (el.type === 'range') {
+      el.value = state[key];
+      updateSliderVal(key, state[key]);
+    } else if (el.type === 'color') {
+      el.value = state[key];
+    } else if (el.tagName === 'SELECT') {
+      el.value = state[key];
+    }
+  });
+  switchTab('component');
+  updateAll();
+}
+
+// ===== HANDLERS =====
+function onSlider(el) {
+  const key = el.dataset.key;
+  const val = parseInt(el.value);
+  state[key] = val;
+  updateSliderVal(key, val);
+  updateAll();
+}
+
+function onColor(el) {
+  const key = el.dataset.key;
+  state[key] = el.value;
+  updateAll();
+}
+
+function onSelect(el) {
+  const key = el.dataset.key;
+  state[key] = el.value;
+  updateAll();
+}
+
+function updateSliderVal(key, val) {
+  const el = document.getElementById('val-' + key);
+  if (!el) return;
+  const map = {
+    btnRadius: 'px', btnHeight: 'px', btnPaddingX: 'px', btnFontSize: 'px',
+    tableFontSize: 'px', tableCellPadY: 'px', tableCellPadX: 'px', tableRadius: 'px',
+    chartBarHeight: 'px', chartBarRadius: 'px', chartRowGap: 'px',
+    tooltipRadius: 'px',
+    cardRadius: 'px', cardPadding: 'px', cardShadow: '', progressHeight: 'px', progressRadius: 'px',
+  };
+  el.textContent = val + (map[key] || '');
+}
+
+function toggleGroup(id) {
+  document.getElementById(id).classList.toggle('open');
+}
+
+// ===== PRESETS =====
+function applyPreset(name) {
+  const preset = PRESETS[name];
+  if (!preset) return;
+  Object.assign(state, preset);
+  // Re-sync all controls
+  document.querySelectorAll('[data-key]').forEach(el => {
+    const key = el.dataset.key;
+    if (el.type === 'range') {
+      el.value = state[key];
+      updateSliderVal(key, state[key]);
+    } else if (el.type === 'color') {
+      el.value = state[key];
+    } else if (el.tagName === 'SELECT') {
+      el.value = state[key];
+    }
+  });
+  updateAll();
+}
+
+// ===== UPDATE PREVIEW =====
+function updateAll() {
+  const root = document.documentElement;
+
+  // Buttons
+  root.style.setProperty('--btn-radius', state.btnRadius + 'px');
+  root.style.setProperty('--btn-height', state.btnHeight + 'px');
+  root.style.setProperty('--btn-padding-x', state.btnPaddingX + 'px');
+  root.style.setProperty('--btn-font-size', state.btnFontSize + 'px');
+  root.style.setProperty('--btn-primary-bg', state.btnPrimaryBg);
+  root.style.setProperty('--btn-primary-text', '#ffffff');
+  root.style.setProperty('--btn-primary-hover-bg', state.btnPrimaryHoverBg);
+  root.style.setProperty('--btn-secondary-bg', '#ffffff');
+  root.style.setProperty('--btn-secondary-border', '#d8e2f1');
+  root.style.setProperty('--btn-secondary-text', '#334155');
+
+  // Table
+  root.style.setProperty('--table-font-size', state.tableFontSize + 'px');
+  root.style.setProperty('--table-cell-padding-y', state.tableCellPadY + 'px');
+  root.style.setProperty('--table-cell-padding-x', state.tableCellPadX + 'px');
+  root.style.setProperty('--table-head-bg', state.tableHeadBg);
+  root.style.setProperty('--table-head-text', state.tableHeadText);
+  root.style.setProperty('--table-hover-bg', state.tableHoverBg);
+  root.style.setProperty('--table-row-border', state.tableRowBorder);
+  root.style.setProperty('--table-head-border-bottom', state.tableHeadBorder);
+  root.style.setProperty('--table-radius', state.tableRadius + 'px');
+
+  // Charts
+  root.style.setProperty('--chart-bar-height', state.chartBarHeight + 'px');
+  root.style.setProperty('--chart-bar-radius', state.chartBarRadius + 'px');
+  root.style.setProperty('--chart-row-gap', state.chartRowGap + 'px');
+  root.style.setProperty('--chart-bar-blue-start', state.chartBlueStart);
+  root.style.setProperty('--chart-bar-blue-end', state.chartBlueEnd);
+  root.style.setProperty('--chart-bar-orange-start', state.chartOrangeStart);
+  root.style.setProperty('--chart-bar-orange-end', state.chartOrangeEnd);
+  root.style.setProperty('--tooltip-radius', state.tooltipRadius + 'px');
+
+  // Cards
+  root.style.setProperty('--card-radius', state.cardRadius + 'px');
+  root.style.setProperty('--card-padding', state.cardPadding + 'px');
+  const s = state.cardShadow;
+  root.style.setProperty('--card-shadow',
+    `0 ${s*0.5}px ${s*2}px rgba(0,0,0,0.04), 0 ${s*0.25}px ${s*0.75}px rgba(0,0,0,0.03)`);
+  root.style.setProperty('--card-hover-shadow',
+    `0 ${s}px ${s*4}px rgba(0,0,0,0.07), 0 ${s*0.25}px ${s*0.75}px rgba(0,0,0,0.04)`);
+  root.style.setProperty('--card-border-style', `1px solid ${state.cardBorder}`);
+  root.style.setProperty('--progress-height', state.progressHeight + 'px');
+  root.style.setProperty('--progress-radius', state.progressRadius + 'px');
+
+  updatePrompt();
+}
+
+// ===== PROMPT OUTPUT =====
+function updatePrompt() {
+  const parts = [];
+
+  // Buttons
+  const btnChanges = [];
+  if (state.btnRadius !== DEFAULTS.btnRadius) btnChanges.push(`圆角 ${state.btnRadius}px`);
+  if (state.btnHeight !== DEFAULTS.btnHeight) btnChanges.push(`高度 ${state.btnHeight}px`);
+  if (state.btnFontSize !== DEFAULTS.btnFontSize) btnChanges.push(`字号 ${state.btnFontSize}px`);
+  if (state.btnPrimaryBg !== DEFAULTS.btnPrimaryBg) btnChanges.push(`主色 ${state.btnPrimaryBg}`);
+  if (btnChanges.length) parts.push(`按钮：${btnChanges.join('、')}`);
+
+  // Table
+  const tableChanges = [];
+  if (state.tableFontSize !== DEFAULTS.tableFontSize) tableChanges.push(`字号 ${state.tableFontSize}px`);
+  if (state.tableCellPadY !== DEFAULTS.tableCellPadY || state.tableCellPadX !== DEFAULTS.tableCellPadX)
+    tableChanges.push(`单元格间距 ${state.tableCellPadY}px/${state.tableCellPadX}px`);
+  if (state.tableHeadBg !== DEFAULTS.tableHeadBg) tableChanges.push(`表头背景 ${state.tableHeadBg}`);
+  if (state.tableHeadText !== DEFAULTS.tableHeadText) tableChanges.push(`表头文字 ${state.tableHeadText}`);
+  if (state.tableHoverBg !== DEFAULTS.tableHoverBg) tableChanges.push(`悬停背景 ${state.tableHoverBg}`);
+  if (state.tableHeadBorder !== DEFAULTS.tableHeadBorder) {
+    const desc = state.tableHeadBorder.includes('3px') ? '加粗强调' : state.tableHeadBorder.includes('1px') ? '细线' : '';
+    tableChanges.push(`表头底线${desc ? '为' + desc : ''}`);
+  }
+  if (tableChanges.length) parts.push(`表格：${tableChanges.join('、')}`);
+
+  // Charts
+  const chartChanges = [];
+  if (state.chartBarHeight !== DEFAULTS.chartBarHeight) chartChanges.push(`柱高 ${state.chartBarHeight}px`);
+  if (state.chartBarRadius !== DEFAULTS.chartBarRadius) chartChanges.push(`柱圆角 ${state.chartBarRadius}px`);
+  if (state.chartRowGap !== DEFAULTS.chartRowGap) chartChanges.push(`行间距 ${state.chartRowGap}px`);
+  if (state.chartBlueStart !== DEFAULTS.chartBlueStart || state.chartBlueEnd !== DEFAULTS.chartBlueEnd)
+    chartChanges.push(`蓝色渐变 ${state.chartBlueStart} → ${state.chartBlueEnd}`);
+  if (state.chartOrangeStart !== DEFAULTS.chartOrangeStart || state.chartOrangeEnd !== DEFAULTS.chartOrangeEnd)
+    chartChanges.push(`橙色渐变 ${state.chartOrangeStart} → ${state.chartOrangeEnd}`);
+  if (chartChanges.length) parts.push(`图表：${chartChanges.join('、')}`);
+
+  // Cards
+  const cardChanges = [];
+  if (state.cardRadius !== DEFAULTS.cardRadius) cardChanges.push(`圆角 ${state.cardRadius}px`);
+  if (state.cardPadding !== DEFAULTS.cardPadding) cardChanges.push(`内边距 ${state.cardPadding}px`);
+  if (state.cardShadow !== DEFAULTS.cardShadow) {
+    const level = state.cardShadow <= 2 ? '极轻' : state.cardShadow <= 6 ? '适中' : '较重';
+    cardChanges.push(`阴影${level}`);
+  }
+  if (state.cardBorder !== DEFAULTS.cardBorder) cardChanges.push(`边框色 ${state.cardBorder}`);
+  if (cardChanges.length) parts.push(`卡片：${cardChanges.join('、')}`);
+
+  // Progress
+  if (state.progressHeight !== DEFAULTS.progressHeight || state.progressRadius !== DEFAULTS.progressRadius)
+    parts.push(`进度条：高度 ${state.progressHeight}px、圆角 ${state.progressRadius}px`);
+
+  if (state.tooltipRadius !== DEFAULTS.tooltipRadius)
+    parts.push(`提示框圆角 ${state.tooltipRadius}px`);
+
+  const promptText = parts.length
+    ? `${activeTab === 'layout' ? '调整数据看板整体页面样式' : '调整数据看板样式'}：${parts.join('。')}。`
+    : `保持数据看板现有默认${activeTab === 'layout' ? '页面' : ''}样式。`;
+
+  document.getElementById('promptText').textContent = promptText;
+}
+
+// ===== COPY =====
+async function copyPrompt() {
+  const text = document.getElementById('promptText').textContent;
+  const btn = document.getElementById('copyBtn');
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  }
+  btn.classList.add('copied');
+  btn.innerHTML = '<svg viewBox="0 0 16 16" fill="currentColor"><path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0z"/></svg> 已复制';
+  setTimeout(() => {
+    btn.classList.remove('copied');
+    btn.innerHTML = '<svg viewBox="0 0 16 16" fill="currentColor"><path d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V2zm2-1a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H6zM2 5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1H10v1H2V6h1V5H2z"/></svg> 复制';
+  }, 1500);
+}
+
+// ===== BOOT =====
+init();
+</script>
+</body>
+</html>

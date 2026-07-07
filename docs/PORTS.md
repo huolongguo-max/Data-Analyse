@@ -23,7 +23,7 @@
 | FastAPI 后端 | 8000 | 监听 `127.0.0.1`，仅 Nginx 可达 |
 | PostgreSQL 数据库 | 5432 | 监听 `localhost`，仅后端可达 |
 
-> 部署采用 Windows 原生运行，不使用 Docker。  
+> 部署方式支持 Windows 原生运行和 macOS / Linux，不使用 Docker。  
 > 所有服务均运行在目标机本地，对外仅暴露端口 80。  
 > 访问地址：`http://<目标机IP>` 或 `http://localhost`
 
@@ -33,11 +33,11 @@
 
 | 项目 | 值 |
 |------|----|
-| 部署方式 | 打包为 zip，解压即用 |
-| 运行时依赖 | 全部内嵌（Python embeddable + PostgreSQL portable + Nginx for Windows） |
+| 部署方式 | 打包为 tar.gz（macOS）/ zip（Windows），解压即用 |
+| 运行时依赖 | macOS：brew 安装的 Python / PostgreSQL / Nginx；Windows：内嵌 Python embeddable + PostgreSQL portable + Nginx for Windows |
 | 对外端口 | 80（HTTP） |
 | 数据持久化 | `data/` 目录（uploads、exports、backups、logs） |
-| 数据库持久化 | `pgsql/data/` 目录 |
+| 数据库持久化 | PostgreSQL: `pgsql/data/`（Windows）或 brew 默认路径（macOS） |
 
 如需修改对外端口（如改为 8080），编辑 `frontend/conf/default.conf`：
 ```nginx

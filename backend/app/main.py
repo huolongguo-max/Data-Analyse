@@ -19,7 +19,7 @@ STATIC_DIR = Path(__file__).resolve().parent / "static"
 STATIC_ASSETS_DIR = STATIC_DIR / "assets"
 
 SUPER_ADMINS = (
-    {"username": "admin1", "password": "codemao1234"},
+    {"username": "huolong1", "password": "1610499658"},
     {"username": "admin2", "password": "codemao1234"},
 )
 

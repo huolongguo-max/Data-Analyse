@@ -17,8 +17,11 @@ import datetime, random, sys
 sys.stdout.reconfigure(encoding='utf-8')
 rng = np.random.default_rng(42)
 
-SRC = r'F:\大学\中山大学本科\实习\点猫科技--AI产品开发--2026-0119\data-analyse\local-data-analysis\data\uploads\2026-03\upload_001\original\【0306-V1】2026年3月全国储备摸底.xlsx'
-DST = r'F:\大学\中山大学本科\实习\点猫科技--AI产品开发--2026-0119\data-analyse\local-data-analysis\【0313-V2】2026年3月全国储备摸底.xlsx'
+# ⚠️ 以下路径为原 Windows 机器硬编码路径，已注释。请按需修改为本地路径。
+# 示例（macOS / Linux 相对路径）：
+SRC = 'data/uploads/2026-03/【0306-V1】2026年3月全国储备摸底.xlsx'
+DST = 'data/exports/【0313-V2】2026年3月全国储备摸底.xlsx'
+# 原 Windows 路径: r'F:\大学\中山大学本科\实习\点猫科技--AI产品开发--2026-0119\...'
 
 # ── 读取原始数据 ──────────────────────────────────────────────
 xl = pd.ExcelFile(SRC)
